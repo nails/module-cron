@@ -130,6 +130,7 @@ class NAILS_Maintenance extends NAILS_Cron_Controller
 
 		//	CDN AWS Sourcefile clearout
 		//	Log file zip up and cleanup
+		//	Clear out old CMS Page previews
 
 		// --------------------------------------------------------------------------
 
