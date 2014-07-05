@@ -38,23 +38,6 @@ class NAILS_Maintenance extends NAILS_Cron_Controller
 
 		//	Hourly Tasks
 
-		// --------------------------------------------------------------------------
-
-		$this->_end();
-	}
-
-
-	// --------------------------------------------------------------------------
-
-
-	public function daily()
-	{
-		$this->_start( 'maintenance', 'daily', 'Daily Maintenance Tasks' );
-
-		// --------------------------------------------------------------------------
-
-		//	Daily Tasks
-
 		//	Shop related tasks
 		if ( module_is_enabled( 'shop' ) ) :
 
@@ -81,6 +64,23 @@ class NAILS_Maintenance extends NAILS_Cron_Controller
 			_LOG( 'Finished Shop Tasks' );
 
 		endif;
+
+		// --------------------------------------------------------------------------
+
+		$this->_end();
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	public function daily()
+	{
+		$this->_start( 'maintenance', 'daily', 'Daily Maintenance Tasks' );
+
+		// --------------------------------------------------------------------------
+
+		//	Daily Tasks
 
 		//	Site map related tasks, makes sense for this one to come last in case any of
 		//	the previous have an impact
