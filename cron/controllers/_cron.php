@@ -35,7 +35,7 @@ class NAILS_Cron_Controller extends NAILS_Controller
 		// --------------------------------------------------------------------------
 
 		//	Command line only
-		if ( ENVIRONMENT == 'production' && ! $this->input->is_cli_request() ) :
+		if ( strtoupper( ENVIRONMENT ) == 'PRODUCTION' && ! $this->input->is_cli_request() ) :
 
 			header( $this->input->server( 'SERVER_PROTOCOL' ) . ' 401 Unauthorized' );
 			die( '<h1>' . lang( 'unauthorised' ) . '</h1>' );
