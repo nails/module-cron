@@ -53,7 +53,7 @@ class NAILS_Maintenance extends NAILS_Cron_Controller
 
 			//	Sync Currencies
 			_LOG( '... Synching Currencies' );
-			if ( ! $this->shop_currency_model->sync() ) :
+			if ( ! $this->shop_currency_model->sync( FALSE ) ) :
 
 				_LOG( '... ... FAILED: ' . $this->shop_currency_model->last_error() );
 
