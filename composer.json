@@ -1,10 +1,17 @@
 {
 	"name": "nailsapp/module-cron",
-	"keywords": ["Nails","Shed Collective","CodeIgniter", "Cron Module"],
+	"keywords":
+	[
+		"Nails",
+		"Shed Collective",
+		"CodeIgniter",
+		"Cron Module"
+	],
 	"homepage": "http://nailsapp.co.uk/modules/cron",
 	"description": "This the \"Cron\" module for Nails.",
-	"license":"MIT",
-	"authors": [
+	"license": "MIT",
+	"authors":
+	[
 		{
 			"name": "Pablo de la Pena",
 			"email": "p@shedcollective.org",
@@ -18,12 +25,12 @@
 			"role": "Developer"
 		}
 	],
-	"support": {
+	"support":
+	{
 		"email": "hello@shedcollective.org"
 	},
 	"require":
 	{
-		"php": ">=5.4.0",
-		"nailsapp/common" : "dev-develop"
+		"nailsapp/common": "dev-develop"
 	}
 }
