@@ -21,120 +21,194 @@ class NAILS_Maintenance extends NAILS_Cron_Controller
 {
 	public function index()
 	{
-		//	TODO: Running the index method should automatically determine
-		//	which tasks should be run. Either it knows that it runs every hour
-		//	and tracks what's been going on, or it looks at the time and works
-		//	out when the last items were run etc. Think about it.
+		/**
+		 * @TODO: Running the index method should automatically determine
+		 * which jobs should be run. Either it knows that it runs every hour
+		 * and tracks what's been going on, or it looks at the time and works
+		 * out when the last items were run etc. Think about it.
+		 */
 	}
 
 	// --------------------------------------------------------------------------
 
 
+	/**
+	 * Hourly maintenance jobs
+	 * @return void
+	 */
 	public function hourly()
 	{
-		$this->_start( 'maintenance', 'hourly', 'Hourly Maintenance Tasks' );
+		$this->_start( 'maintenance', 'hourly', 'Hourly Maintenance Jobs' );
+		$this->runJobs('hourly');
+		$this->_end();
+	}
 
-		// --------------------------------------------------------------------------
 
-		//	Hourly Tasks
+	// --------------------------------------------------------------------------
 
-		//	Shop related tasks
-		if ( module_is_enabled( 'shop' ) ) :
 
-			_LOG( 'Shop Module Enabled. Beginning Shop Tasks.' );
+	/**
+	 * Daily maintenance jobs
+	 * @return void
+	 */
+	public function daily()
+	{
+		$this->_start( 'maintenance', 'daily', 'Daily Maintenance Jobs' );
+		$this->runJobs('daily');
+		$this->_end();
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	/**
+	 * Weekly maintenance jobs
+	 * @return void
+	 */
+	public function weekly()
+	{
+		/**
+		 * Possible Weekly Jobs
+		 *
+		 * - CDN AWS Sourcefile clearout
+		 * - Log file zip up and cleanup
+		 * - Clear out old CMS Page previews
+		 */
+
+		$this->_start( 'maintenance', 'weekly', 'Weekly Maintenance Jobs' );
+		$this->runJobs('weekly');
+		$this->_end();
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	/**
+	 * Monthly maintenance jobs
+	 * @return void
+	 */
+	public function monthly()
+	{
+		$this->_start( 'maintenance', 'monthly', 'Monthly Maintenance Jobs' );
+		$this->runJobs('monthly');
+		$this->_end();
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	/**
+	 * Runs all jobs which belong to a specific prefix
+	 * @param  string $prefix The prefix to run for
+	 * @return void
+	 */
+	protected function runJobs($prefix)
+	{
+		$class   = new ReflectionClass($this);
+		$methods = $class->getMethods();
+		$toCall  = array();
+
+		foreach ($methods as $method) {
+
+			if (preg_match('/^' . $prefix . '.+/', $method->name)) {
+
+				$toCall[] = $method->name;
+			}
+		}
+
+		_LOG('Executing ' . count($toCall) . ' maintenance tasks.');
+
+		foreach ($toCall as $method) {
+
+			_LOG('---');
+			_LOG('Calling "' . $method . '()"');
+			$this->$method();
+		}
+	}
+
+
+	// --------------------------------------------------------------------------
+
+
+	/**
+	 * all shop tasks which need run hourly
+	 * @return void
+	 */
+	protected function hourlyShop()
+	{
+		if (module_is_enabled('shop')) {
+
+			_LOG('Shop Module Enabled. Beginning Shop Jobs.');
 
 			// --------------------------------------------------------------------------
 
 			//	Load models
-			$this->load->model( 'shop/shop_model' );
-			$this->load->model( 'shop/shop_currency_model' );
+			$this->load->model('shop/shop_model');
+			$this->load->model('shop/shop_currency_model');
 
 			// --------------------------------------------------------------------------
 
 			//	Sync Currencies
 			_LOG( '... Synching Currencies' );
-			if ( ! $this->shop_currency_model->sync( FALSE ) ) :
+			if (!$this->shop_currency_model->sync(false)) {
 
-				_LOG( '... ... FAILED: ' . $this->shop_currency_model->last_error() );
-
-			endif;
+				_LOG('... ... FAILED: ' . $this->shop_currency_model->last_error());
+			}
 
 			// --------------------------------------------------------------------------
 
-			_LOG( 'Finished Shop Tasks' );
-
-		endif;
-
-		// --------------------------------------------------------------------------
-
-		$this->_end();
+			_LOG('Finished Shop Jobs');
+		}
 	}
 
 
 	// --------------------------------------------------------------------------
 
 
-	public function daily()
+	/**
+	 * All Sitemap jobs which should be run daily.
+	 * @return void
+	 */
+	public function dailySitemap()
 	{
-		$this->_start( 'maintenance', 'daily', 'Daily Maintenance Tasks' );
+		if (module_is_enabled('sitemap')) {
 
-		// --------------------------------------------------------------------------
-
-		//	Daily Tasks
-
-		//	Site map related tasks, makes sense for this one to come last in case any of
-		//	the previous have an impact
-
-		if ( module_is_enabled( 'sitemap' ) ) :
-
-			_LOG( 'Sitemap Module Enabled. Beginning Sitemap Tasks.' );
+			_LOG('Sitemap Module Enabled. Beginning Sitemap Jobs.');
 
 			// --------------------------------------------------------------------------
 
 			//	Load models
-			$this->load->model( 'sitemap/sitemap_model' );
+			$this->load->model('sitemap/sitemap_model');
 
 			// --------------------------------------------------------------------------
 
 			//	Generate sitemap
-			_LOG( '... Generating Sitemap data' );
-			if ( ! $this->sitemap_model->generate() ) :
+			_LOG('... Generating Sitemap data');
+			if (!$this->sitemap_model->generate()) {
 
-				_LOG( '... ... FAILED: ' . $this->sitemap_model->last_error() );
-
-			endif;
+				_LOG('... ... FAILED: ' . $this->sitemap_model->last_error());
+			}
 
 			// --------------------------------------------------------------------------
 
-			_LOG( 'Finished Site Tasks' );
-
-		endif;
-
-
-		// --------------------------------------------------------------------------
-
-		$this->_end();
+			_LOG( 'Finished Site Jobs' );
+		}
 	}
 
 
 	// --------------------------------------------------------------------------
 
 
-	public function weekly()
+	/**
+	 * All Email tasks which should be run daily.
+	 * @return void
+	 */
+	public function dailyEmail()
 	{
-		$this->_start( 'maintenance', 'weekly', 'Weekly Maintenance Tasks' );
-
-		// --------------------------------------------------------------------------
-
-		//	Weekly Tasks
-
-		//	CDN AWS Sourcefile clearout
-		//	Log file zip up and cleanup
-		//	Clear out old CMS Page previews
-
-		// --------------------------------------------------------------------------
-
-		$this->_end();
+		// @TODO: Discard old emails from the archive? Configurable retention?
 	}
 }
 
