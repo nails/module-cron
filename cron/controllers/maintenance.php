@@ -139,7 +139,7 @@ class NAILS_Maintenance extends NAILS_Cron_Controller
 	 */
 	protected function hourlyShop()
 	{
-		if (module_is_enabled('shop')) {
+		if (isModuleEnabled('shop')) {
 
 			_LOG('Shop Module Enabled. Beginning Shop Jobs.');
 
@@ -174,7 +174,7 @@ class NAILS_Maintenance extends NAILS_Cron_Controller
 	 */
 	public function dailySitemap()
 	{
-		if (module_is_enabled('sitemap')) {
+		if (isModuleEnabled('sitemap')) {
 
 			_LOG('Sitemap Module Enabled. Beginning Sitemap Jobs.');
 
