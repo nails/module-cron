@@ -36,6 +36,7 @@
     {
         "nails" :
         {
+            "moduleName": "cron",
             "type": "module"
         }
     }
