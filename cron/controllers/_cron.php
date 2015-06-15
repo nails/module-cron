@@ -54,7 +54,7 @@ class NAILS_Cron_Controller extends NAILS_Controller
      * @param  string $sTaskId  An optional identifier for the task (useful for when multiple jobs of the same type might run in parallel)
      * @return void
      */
-    protected function _start($sLogDir, $sLogFile, $sTask, $sTaskId)
+    protected function _start($sLogDir, $sLogFile, $sTask, $sTaskId = '')
     {
         //  Tick tock tick...
         $this->iStart  = microtime(true) * 10000;
