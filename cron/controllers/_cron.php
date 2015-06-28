@@ -62,7 +62,8 @@ class NAILS_Cron_Controller extends NAILS_Controller
         $this->sTaskId = trim($sTaskId);
 
         //  Set log details
-        _LOG_FILE('cron/' . $sLogDir . '/' . $sLogFile . '-' . date('Y-m-d') . '.php');
+        _LOG_DIR('cron/' . $sLogDir);
+        _LOG_FILE($sLogFile . '-' . date('Y-m-d') . '.php');
         $this->writeLog('Starting job [' . $this->sTask . ']...');
     }
 
@@ -104,7 +105,7 @@ class NAILS_Cron_Controller extends NAILS_Controller
      * @param  string $sLine The line to write
      * @return void
      */
-    protected function writeLog($sLine)
+    protected function writeLog($sLine = '')
     {
         if ($this->sTaskId) {
             $sLine = '[' . $this->sTaskId. '] ' . $sLine;
