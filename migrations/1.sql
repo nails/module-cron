@@ -1,0 +1,1 @@
+DROP TABLE `{{NAILS_DB_PREFIX}}log_cron`;
