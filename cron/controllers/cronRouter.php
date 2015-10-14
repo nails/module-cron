@@ -10,6 +10,8 @@
  * @link
  */
 
+use Nails\Factory;
+
 class CronRouter extends \Nails_Controller
 {
     private $sModuleName;
@@ -44,8 +46,8 @@ class CronRouter extends \Nails_Controller
         $this->aParams = array_slice($aUri, 3);
 
         //  Configure logging
-        $oDateTime     = \Nails\Factory::factory('DateTime');
-        $this->oLogger = \Nails\Factory::service('Logger');
+        $oDateTime     = Factory::factory('DateTime');
+        $this->oLogger = Factory::service('Logger');
         $this->oLogger->setFile('cron-' . $oDateTime->format('y-m-d') . '.php');
     }
 

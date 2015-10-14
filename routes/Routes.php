@@ -1,7 +1,5 @@
 <?php
 
-namespace Nails\Routes\Cron;
-
 /**
  * Generates Cron routes
  *
@@ -11,6 +9,8 @@ namespace Nails\Routes\Cron;
  * @author      Nails Dev Team
  * @link
  */
+
+namespace Nails\Routes\Cron;
 
 class Routes
 {
