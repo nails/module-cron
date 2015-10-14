@@ -10,7 +10,7 @@
  * @link
  */
 
-namespace Nails\Cron\Controllers;
+namespace Nails\Cron\Controller;
 
 class Base extends \MX_Controller
 {
