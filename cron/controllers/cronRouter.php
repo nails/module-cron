@@ -34,7 +34,8 @@ class CronRouter extends \Nails_Controller
         $sUri = uri_string();
 
         //  Remove the module prefix (i.e "cron/") then explode into segments
-        $sUri = substr($sUri, 5);
+        //  Using regex as some systems will report a leading slash (e.g CLI)
+        $sUri = preg_replace('#/?cron/#', '', $sUri);
         $aUri = explode('/', $sUri);
 
         //  Work out the moduleName, className and method
@@ -139,7 +140,9 @@ class CronRouter extends \Nails_Controller
 
             } else {
 
-                $this->writeLog('"' . $this->sModuleName . '" is incorrectly configured.');
+                $this->writeLog(
+                    '"' . $this->sModuleName . '" is incorrectly configured; could not find class ' . $this->sModuleName
+                );
             }
 
         } else {
@@ -158,7 +161,7 @@ class CronRouter extends \Nails_Controller
      */
     public function writeLog($sLine)
     {
-        $sLine  = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine . "\n";
+        $sLine  = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine;
         $this->oLogger->line($sLine);
     }
 }

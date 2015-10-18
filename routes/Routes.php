@@ -21,7 +21,7 @@ class Routes
     public function getRoutes()
     {
         $routes = array();
-        $routes['cron/(:any)'] = 'api/cronRouter/index';
+        $routes['cron/(:any)'] = 'cron/cronRouter/index';
         return $routes;
     }
 }
