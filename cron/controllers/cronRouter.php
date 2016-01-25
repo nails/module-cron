@@ -11,6 +11,7 @@
  */
 
 use Nails\Factory;
+use Nails\Environment;
 
 class CronRouter extends \Nails_Controller
 {
@@ -61,7 +62,7 @@ class CronRouter extends \Nails_Controller
     public function index()
     {
         //  Command line only
-        if (strtoupper(ENVIRONMENT) == 'PRODUCTION' && ! $this->input->is_cli_request()) {
+        if (Environment::is('PRODUCTION') && ! $this->input->is_cli_request()) {
 
             header($this->input->server('SERVER_PROTOCOL') . ' 401 Unauthorized');
             echo '<h1>' . lang('unauthorised') . '</h1>';
