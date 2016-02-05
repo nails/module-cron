@@ -142,7 +142,7 @@ class CronRouter extends \Nails_Controller
             } else {
 
                 $this->writeLog(
-                    '"' . $this->sModuleName . '" is incorrectly configured; could not find class ' . $this->sModuleName
+                    '"' . $this->sModuleName . '" is incorrectly configured; could not find class ' . $this->sModuleName . '  at path ' . $sControllerPath
                 );
             }
 
