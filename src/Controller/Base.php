@@ -26,6 +26,12 @@ class Base extends \MX_Controller
         parent::__construct();
         $this->oCronRouter = $oCronRouter;
 
+        // --------------------------------------------------------------------------
+
+        //  By default cron jobs should be long lasting
+        if (function_exists('set_time_limit')) {
+            set_time_limit(0);
+        }
     }
 
     // --------------------------------------------------------------------------
