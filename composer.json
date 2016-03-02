@@ -42,7 +42,8 @@
         "nails" :
         {
             "moduleName": "cron",
-            "type": "module"
+            "type": "module",
+            "namespace": "Nails\\Cron\\"
         }
     }
 }
