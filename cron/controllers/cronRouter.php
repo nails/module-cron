@@ -12,8 +12,9 @@
 
 use Nails\Factory;
 use Nails\Environment;
+use App\Controller\Base;
 
-class CronRouter extends \Nails_Controller
+class CronRouter extends Base
 {
     private $sModuleName;
     private $sClassName;
