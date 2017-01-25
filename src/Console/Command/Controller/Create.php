@@ -2,6 +2,7 @@
 
 namespace Nails\Cron\Console\Command\Controller;
 
+use Nails\Cron\Exception\Console\ControllerExistsException;
 use Nails\Console\Command\BaseMaker;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -9,8 +10,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class Create extends BaseMaker
 {
-    const RESOURCE_PATH   = NAILS_PATH . 'nailsapp/module-cron/resources/console/';
-    const CONTROLLER_PATH = FCPATH . 'application/modules/cron/';
+    const RESOURCE_PATH   = NAILS_PATH . 'module-cron/resources/console/';
+    const CONTROLLER_PATH = FCPATH . 'application/modules/cron/controllers/';
 
     // --------------------------------------------------------------------------
 
@@ -20,17 +21,11 @@ class Create extends BaseMaker
     protected function configure()
     {
         $this->setName('make:controller:cron');
-        $this->setDescription('[WIP] Creates a new Cron controller');
+        $this->setDescription('Creates a new Cron controller');
         $this->addArgument(
-            'modelName',
+            'className',
             InputArgument::OPTIONAL,
             'Define the name of the model on which to base the controller'
-        );
-        $this->addArgument(
-            'providerName',
-            InputArgument::OPTIONAL,
-            'Define the provider of the model',
-            'app'
         );
     }
 
@@ -90,9 +85,24 @@ class Create extends BaseMaker
 
         try {
 
-            dumpanddie($aFields);
+            //  Check for existing controller
+            $sPath  = static::CONTROLLER_PATH . $aFields['CLASS_NAME'] . '.php';
+            if (file_exists($sPath)) {
+                throw new ControllerExistsException(
+                    'Controller "' . $aFields['CLASS_NAME'] . '" exists already at path "' . $sPath . '"'
+                );
+            }
 
+            $this->createFile($sPath, $this->getResource('template/controller.php', $aFields));
+
+        } catch (ControllerExistsException $e) {
+            //  Do not clean up (delete existing controller)!
+            throw new \Exception($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
+            //  Clean up
+            if (!empty($sPath)) {
+                @unlink($sPath);
+            }
             throw new \Exception($e->getMessage());
         }
     }
