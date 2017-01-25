@@ -2,8 +2,8 @@
 
 namespace Nails\Cron\Console\Command\Controller;
 
-use Nails\Cron\Exception\Console\ControllerExistsException;
 use Nails\Console\Command\BaseMaker;
+use Nails\Cron\Exception\Console\ControllerExistsException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -81,27 +81,39 @@ class Create extends BaseMaker
      */
     private function createController()
     {
-        $aFields = $this->getArguments();
+        $aFields  = $this->getArguments();
+        $aCreated = [];
 
         try {
 
-            //  Check for existing controller
-            $sPath  = static::CONTROLLER_PATH . $aFields['CLASS_NAME'] . '.php';
-            if (file_exists($sPath)) {
-                throw new ControllerExistsException(
-                    'Controller "' . $aFields['CLASS_NAME'] . '" exists already at path "' . $sPath . '"'
-                );
+            $aClasses = array_filter(explode(',', $aFields['CLASS_NAME']));
+
+            foreach ($aClasses as $sClass) {
+
+                $aFields['CLASS_NAME'] = $sClass;
+                $this->oOutput->write('Creating controller <comment>' . $sClass . '</comment>... ');
+
+                //  Check for existing controller
+                $sPath = static::CONTROLLER_PATH . $sClass . '.php';
+                if (file_exists($sPath)) {
+                    throw new ControllerExistsException(
+                        'Controller "' . $sClass . '" exists already at path "' . $sPath . '"'
+                    );
+                }
+
+                $this->createFile($sPath, $this->getResource('template/controller.php', $aFields));
+                $aCreated[] = $sPath;
+                $this->oOutput->writeln('<info>done!</info>');
             }
 
-            $this->createFile($sPath, $this->getResource('template/controller.php', $aFields));
-
-        } catch (ControllerExistsException $e) {
-            //  Do not clean up (delete existing controller)!
-            throw new \Exception($e->getMessage(), $e->getCode());
         } catch (\Exception $e) {
-            //  Clean up
-            if (!empty($sPath)) {
-                @unlink($sPath);
+            $this->oOutput->writeln('<error>failed!</error>');
+            //  Clean up created models
+            if (!empty($aCreated)) {
+                $this->oOutput->writeln('<error>Cleaning up - removing newly created controllers</error>');
+                foreach ($aCreated as $sPath) {
+                    @unlink($sPath);
+                }
             }
             throw new \Exception($e->getMessage());
         }
