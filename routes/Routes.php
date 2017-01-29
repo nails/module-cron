@@ -16,12 +16,13 @@ class Routes
 {
     /**
      * Returns an array of routes for this module
+     *
      * @return array
      */
     public function getRoutes()
     {
-        $routes = array();
-        $routes['cron/(:any)'] = 'cron/cronRouter/index';
-        return $routes;
+        return [
+            'cron/(:any)' => 'cron/cronRouter/index'
+        ];
     }
 }
