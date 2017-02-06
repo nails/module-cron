@@ -76,7 +76,7 @@ class CronRouter extends Base
          * Look for a controller, app version first then the module's cron controllers directory
          */
         $aControllerPaths = array(
-            FCPATH . APPPATH . 'modules/cron/controllers/'
+            APPPATH . 'modules/cron/controllers/'
         );
 
         $nailsModules = _NAILS_GET_MODULES();
