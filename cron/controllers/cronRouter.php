@@ -10,9 +10,9 @@
  * @link
  */
 
-use Nails\Factory;
-use Nails\Environment;
 use App\Controller\Base;
+use Nails\Environment;
+use Nails\Factory;
 
 class CronRouter extends Base
 {
@@ -63,9 +63,9 @@ class CronRouter extends Base
     public function index()
     {
         //  Command line only
-        if (Environment::is('PRODUCTION') && ! $this->input->is_cli_request()) {
-
-            header($this->input->server('SERVER_PROTOCOL') . ' 401 Unauthorized');
+        $oInput = Factory::service('Input');
+        if (Environment::is('PRODUCTION') && !$oInput->isCli()) {
+            header($oInput->server('SERVER_PROTOCOL') . ' 401 Unauthorized');
             echo '<h1>' . lang('unauthorised') . '</h1>';
             exit(401);
         }
@@ -75,9 +75,9 @@ class CronRouter extends Base
         /**
          * Look for a controller, app version first then the module's cron controllers directory
          */
-        $aControllerPaths = array(
-            FCPATH . APPPATH . 'modules/cron/controllers/'
-        );
+        $aControllerPaths = [
+            FCPATH . APPPATH . 'modules/cron/controllers/',
+        ];
 
         $nailsModules = _NAILS_GET_MODULES();
 
@@ -115,7 +115,7 @@ class CronRouter extends Base
                 //  New instance of the controller
                 $oInstance = new $this->sModuleName($this);
 
-                if (is_callable(array($oInstance, $this->sMethod))) {
+                if (is_callable([$oInstance, $this->sMethod])) {
 
                     //  Begin timing
                     $this->writeLog('Starting job');
@@ -128,7 +128,7 @@ class CronRouter extends Base
 
                     $iStart = microtime(true) * 10000;
 
-                    call_user_func_array(array($oInstance, $this->sMethod), $this->aParams);
+                    call_user_func_array([$oInstance, $this->sMethod], $this->aParams);
 
                     $iEnd      = microtime(true) * 10000;
                     $iDuration = ($iEnd - $iStart) / 10000;
@@ -159,11 +159,12 @@ class CronRouter extends Base
 
     /**
      * Write a line to the cron log
+     *
      * @param string $sLine The line to write
      */
     public function writeLog($sLine)
     {
-        $sLine  = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine;
+        $sLine = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine;
         $this->oLogger->line($sLine);
     }
 }
