@@ -23,7 +23,7 @@ class Routes implements RouteGenerator
     public static function generate()
     {
         return [
-            'cron/(:any)' => 'cron/cronRouter/index',
+            'cron(/(.+))?' => 'cron/cronRouter/index',
         ];
     }
 }
