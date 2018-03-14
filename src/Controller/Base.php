@@ -12,7 +12,27 @@
 
 namespace Nails\Cron\Controller;
 
-class Base extends \MX_Controller
+use Nails\Cron\Events;
+use Nails\Factory;
+
+// --------------------------------------------------------------------------
+
+/**
+ * Allow the app to add functionality, if needed
+ */
+if (class_exists('\App\Cron\Controller\Base')) {
+    class BaseMiddle extends \App\Cron\Controller\Base
+    {
+    }
+} else {
+    class BaseMiddle
+    {
+    }
+}
+
+// --------------------------------------------------------------------------
+
+class Base extends BaseMiddle
 {
     protected $oCronRouter;
 
@@ -24,6 +44,15 @@ class Base extends \MX_Controller
     public function __construct($oCronRouter)
     {
         parent::__construct();
+
+        //  Setup Events
+        $oEventService = Factory::service('Event');
+
+        //  Call the CRON:STARTUP event, cron is constructing
+        $oEventService->trigger(Events::CRON_STARTUP, 'nailsapp/module-cron');
+
+        // --------------------------------------------------------------------------
+
         $this->oCronRouter = $oCronRouter;
 
         // --------------------------------------------------------------------------
@@ -32,6 +61,11 @@ class Base extends \MX_Controller
         if (function_exists('set_time_limit')) {
             set_time_limit(0);
         }
+
+        // --------------------------------------------------------------------------
+
+        //  Call the CRON:READY event, cron is all geared up and ready to go
+        $oEventService->trigger(Events::CRON_READY, 'nailsapp/module-cron');
     }
 
     // --------------------------------------------------------------------------
