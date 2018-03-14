@@ -27,6 +27,9 @@ if (class_exists('\App\Cron\Controller\Base')) {
 } else {
     abstract class BaseMiddle
     {
+        public function __construct()
+        {
+        }
     }
 }
 
