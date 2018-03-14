@@ -21,18 +21,18 @@ use Nails\Factory;
  * Allow the app to add functionality, if needed
  */
 if (class_exists('\App\Cron\Controller\Base')) {
-    class BaseMiddle extends \App\Cron\Controller\Base
+    abstract class BaseMiddle extends \App\Cron\Controller\Base
     {
     }
 } else {
-    class BaseMiddle
+    abstract class BaseMiddle
     {
     }
 }
 
 // --------------------------------------------------------------------------
 
-class Base extends BaseMiddle
+abstract class Base extends BaseMiddle
 {
     protected $oCronRouter;
 
