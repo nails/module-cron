@@ -6,7 +6,7 @@
  * Finalised:   12/10/2015
  */
 
-namespace Nails\Database\Migration\Nailsapp\ModuleCron;
+namespace Nails\Database\Migration\Nails\ModuleCron;
 
 use Nails\Common\Console\Migrate\Base;
 

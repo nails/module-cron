@@ -1,4 +1,4 @@
-# Docs for `nailsapp/module-cron`
+# Docs for `nails/module-cron`
 > Documentation is a WIP.
 
 This module provides a unified interface for Cron commands

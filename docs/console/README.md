@@ -1,6 +1,6 @@
 # Console Commands
 
-The following console tools are provided by this module and can be executed using the [Nails Console Tool](https://github.com/nailsapp/module-console).
+The following console tools are provided by this module and can be executed using the [Nails Console Tool](https://github.com/nails/module-console).
 
 
 | Command                | Description                   |

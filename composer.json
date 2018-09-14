@@ -1,5 +1,5 @@
 {
-    "name": "nailsapp/module-cron",
+    "name": "nails/module-cron",
     "keywords": ["Nails", "Shed Collective", "CodeIgniter", "Cron Module"],
     "homepage": "http://nailsapp.co.uk/modules/cron",
     "description": "This is the \"Cron\" module for Nails.",
@@ -27,7 +27,7 @@
     "prefer-stable": true,
     "require":
     {
-        "nailsapp/common": "dev-develop"
+        "nails/common": "dev-develop"
     },
     "require-dev":
     {

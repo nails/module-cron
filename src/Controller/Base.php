@@ -52,7 +52,7 @@ abstract class Base extends BaseMiddle
         $oEventService = Factory::service('Event');
 
         //  Call the CRON:STARTUP event, cron is constructing
-        $oEventService->trigger(Events::CRON_STARTUP, 'nailsapp/module-cron');
+        $oEventService->trigger(Events::CRON_STARTUP, 'nails/module-cron');
 
         // --------------------------------------------------------------------------
 
@@ -68,7 +68,7 @@ abstract class Base extends BaseMiddle
         // --------------------------------------------------------------------------
 
         //  Call the CRON:READY event, cron is all geared up and ready to go
-        $oEventService->trigger(Events::CRON_READY, 'nailsapp/module-cron');
+        $oEventService->trigger(Events::CRON_READY, 'nails/module-cron');
     }
 
     // --------------------------------------------------------------------------
