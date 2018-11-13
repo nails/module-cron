@@ -181,7 +181,7 @@ class CronRouter extends BaseMiddle
     public function writeLog($sLine)
     {
         $sLine = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine;
-        if (Environment::is('DEVEOPMENT')) {
+        if (Environment::is('DEVELOPMENT')) {
             echo $sLine . "\n";
         } else {
             $this->oLogger->line($sLine);
