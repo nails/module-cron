@@ -11,7 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 class Create extends BaseMaker
 {
     const RESOURCE_PATH   = NAILS_PATH . 'module-cron/resources/console/';
-    const CONTROLLER_PATH = FCPATH . 'application/modules/cron/controllers/';
+    const CONTROLLER_PATH = NAILS_APP_PATH . 'application/modules/cron/controllers/';
 
     // --------------------------------------------------------------------------
 
