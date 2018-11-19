@@ -80,7 +80,7 @@ class CronRouter extends BaseMiddle
     {
         //  Command line only
         $oInput = Factory::service('Input');
-        if (Environment::is('PRODUCTION') && !$oInput->isCli()) {
+        if (Environment::is(Environment::ENV_PROD) && !$oInput->isCli()) {
             header($oInput->server('SERVER_PROTOCOL') . ' 401 Unauthorized');
             echo '<h1>' . lang('unauthorised') . '</h1>';
             exit(401);
@@ -181,7 +181,7 @@ class CronRouter extends BaseMiddle
     public function writeLog($sLine)
     {
         $sLine = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine;
-        if (Environment::is('DEVELOPMENT')) {
+        if (Environment::is(Environment::ENV_DEV)) {
             echo $sLine . "\n";
         } else {
             $this->oLogger->line($sLine);
