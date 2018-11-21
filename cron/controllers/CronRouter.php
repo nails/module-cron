@@ -10,6 +10,7 @@
  * @link
  */
 
+use Nails\Components;
 use Nails\Environment;
 use Nails\Factory;
 
@@ -80,7 +81,7 @@ class CronRouter extends BaseMiddle
     {
         //  Command line only
         $oInput = Factory::service('Input');
-        if (Environment::is(Environment::ENV_PROD) && !$oInput->isCli()) {
+        if (Environment::is(Environment::ENV_PROD) && !$oInput::isCli()) {
             header($oInput->server('SERVER_PROTOCOL') . ' 401 Unauthorized');
             echo '<h1>' . lang('unauthorised') . '</h1>';
             exit(401);
@@ -95,7 +96,7 @@ class CronRouter extends BaseMiddle
             APPPATH . 'modules/cron/controllers/',
         );
 
-        $nailsModules = _NAILS_GET_MODULES();
+        $nailsModules = Components::modules();
 
         foreach ($nailsModules as $oModule) {
 
