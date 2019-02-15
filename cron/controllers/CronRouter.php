@@ -93,7 +93,7 @@ class CronRouter extends BaseMiddle
          * Look for a controller, app version first then the module's cron controllers directory
          */
         $aControllerPaths = array(
-            APPPATH . 'modules/cron/controllers/',
+            NAILS_APP_PATH . 'application/modules/cron/controllers/',
         );
 
         $nailsModules = Components::modules();
