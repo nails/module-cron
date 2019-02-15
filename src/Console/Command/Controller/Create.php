@@ -18,15 +18,16 @@ class Create extends BaseMaker
     /**
      * Configure the command
      */
-    protected function configure()
+    protected function configure(): void
     {
-        $this->setName('make:controller:cron');
-        $this->setDescription('Creates a new Cron controller');
-        $this->addArgument(
-            'className',
-            InputArgument::OPTIONAL,
-            'Define the name of the model on which to base the controller'
-        );
+        $this
+            ->setName('make:controller:cron')
+            ->setDescription('Creates a new Cron controller')
+            ->addArgument(
+                'className',
+                InputArgument::OPTIONAL,
+                'Define the name of the model on which to base the controller'
+            );
     }
 
     // --------------------------------------------------------------------------
@@ -34,11 +35,12 @@ class Create extends BaseMaker
     /**
      * Executes the app
      *
-     * @param  InputInterface $oInput The Input Interface provided by Symfony
+     * @param  InputInterface  $oInput  The Input Interface provided by Symfony
      * @param  OutputInterface $oOutput The Output Interface provided by Symfony
+     *
      * @return int
      */
-    protected function execute(InputInterface $oInput, OutputInterface $oOutput)
+    protected function execute(InputInterface $oInput, OutputInterface $oOutput): int
     {
         parent::execute($oInput, $oOutput);
 
@@ -77,9 +79,8 @@ class Create extends BaseMaker
      * Create the Model
      *
      * @throws \Exception
-     * @return void
      */
-    private function createController()
+    private function createController(): void
     {
         $aFields  = $this->getArguments();
         $aCreated = [];
