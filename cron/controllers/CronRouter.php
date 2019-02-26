@@ -75,6 +75,7 @@ class CronRouter extends BaseMiddle
 
     /**
      * Route the call to the correct place
+     *
      * @return Void
      */
     public function index()
@@ -92,9 +93,9 @@ class CronRouter extends BaseMiddle
         /**
          * Look for a controller, app version first then the module's cron controllers directory
          */
-        $aControllerPaths = array(
+        $aControllerPaths = [
             NAILS_APP_PATH . 'application/modules/cron/controllers/',
-        );
+        ];
 
         $nailsModules = Components::modules();
 
@@ -181,11 +182,6 @@ class CronRouter extends BaseMiddle
      */
     public function writeLog($sLine)
     {
-        $sLine = ' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine;
-        if (Environment::is(Environment::ENV_DEV)) {
-            echo $sLine . "\n";
-        } else {
-            $this->oLogger->line($sLine);
-        }
+        $this->oLogger->line(' [' . $this->sModuleName . '->' . $this->sMethod . '] ' . $sLine);
     }
 }
