@@ -9,3 +9,10 @@ This is the Cron module for nails, it provides a centralsied touchpoint for sche
 
 
 http://nailsapp.co.uk/modules/cron
+
+
+## Documentation
+
+- [Console](docs/console/README.md)
+- [Controllers](docs/controllers/README.md)
+- [Events](docs/events/README.md)

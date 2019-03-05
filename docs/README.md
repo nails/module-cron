@@ -3,5 +3,6 @@
 
 This module provides a unified interface for Cron commands
 
-- [Console](/docs/console/README.md)
-- [Controllers](/docs/controllers/README.md)
+- [Console](console/README.md)
+- [Controllers](controllers/README.md)
+- [Events](events/README.md)
