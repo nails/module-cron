@@ -116,7 +116,7 @@ class Create extends BaseMaker
                     @unlink($sPath);
                 }
             }
-            throw new \Exception($e->getMessage());
+            throw $e;
         }
     }
 }
