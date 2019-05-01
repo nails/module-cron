@@ -24,4 +24,16 @@ class Events extends Base
      * Fired when cron is ready
      */
     const CRON_READY = 'CRON:READY';
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns the namespace for events fired by this module
+     *
+     * @return stirng
+     */
+    public static function getEventNamespace(): string
+    {
+        return 'nails/module-cron';
+    }
 }
