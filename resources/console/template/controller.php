@@ -15,15 +15,30 @@ return <<<'EOD'
  * @category controller
  */
 
-namespace Nails\Cron\App;
+namespace {{NAMESPACE}};
 
 use Nails\Cron\Controller\Base;
 
+/**
+ * Class {{CLASS_NAME}}
+ *
+ * @package {{NAMESPACE}}
+ */
 class {{CLASS_NAME}} extends Base
 {
-    public function index()
-    {   
-    }
+    /**
+     * The cron expression of when to run
+     *
+     * @var string
+     */
+    const CRON_EXPRESSION = '* * * * *';
+    
+    /**
+     * The console command to execute
+     *
+     * @var string
+     */
+    const CONSOLE_COMMAND = '';
 }
 
 EOD;
