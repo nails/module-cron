@@ -2,6 +2,7 @@
 
 namespace Nails\Cron\Console\Command;
 
+use Cron\CronExpression;
 use Nails\Common\Factory\Component;
 use Nails\Common\Interfaces\ErrorHandlerDriver;
 use Nails\Common\Service\Database;
@@ -105,7 +106,7 @@ class Run extends Base
                         $sClassName   = str_replace($sCronPath, '', $sCommandPath);
                         $sClassName   = $oComponent->namespace . 'Cron\\' . rtrim(str_replace(DIRECTORY_SEPARATOR, '\\', $sClassName), '.php');
 
-                        if (class_exists($sClassName) && classImplements($sClassName, Command::class)) {
+                        if (class_exists($sClassName) && classExtends($sClassName, \Nails\Cron\Command\Base::class)) {
                             $this->aCommands[] = new $sClassName();
                         }
                     }
@@ -151,23 +152,29 @@ class Run extends Base
         /** @var \Nails\Cron\Command\Base $oCommand */
         foreach ($this->aCommands as $oCommand) {
 
-            $sClass = get_class($oCommand);
-            $this->oOutput->write('<info>' . $sClass . '</info>... ');
-
-            //  Ensure that there is space for the process to run
-            if (getFromArray($sClass, $aActiveProcesses, 0) >= $oCommand::MAX_PROCESSES) {
-                $this->oOutput->writeln('reached maximum allowed number of process');
-                continue;
-            }
-
-            if (!$oCommand->shouldRun($oNow)) {
-                $this->oOutput->writeln('not time to run');
-                continue;
-            }
-
             try {
 
-                $this->oOutput->writeln('allowed to run');
+                $sClass = get_class($oCommand);
+                $this->oOutput->write('<info>' . $sClass . '</info>... ');
+
+                //  Ensure that there is space for the process to run
+                if (getFromArray($sClass, $aActiveProcesses, 0) >= $oCommand::MAX_PROCESSES) {
+                    $this->oOutput->writeln('reached maximum allowed number of process');
+                    continue;
+                } elseif (empty($oCommand::CRON_EXPRESSION)) {
+                    $this->oOutput->writeln('');
+                    throw new CommandMisconfiguredException(
+                        'Cron command "' . $sClass . '" misconfigured; CRON_EXPRESSION is empty'
+                    );
+                }
+
+                $oExpression = CronExpression::factory($oCommand::CRON_EXPRESSION);
+                if (!$oExpression->isDue($oNow)) {
+                    $this->oOutput->writeln('not due to run');
+                    continue;
+                }
+
+                $this->oOutput->writeln('due to run');
                 $iTimerStart = microtime(true) * 10000;
 
                 $iProcessId = $oProcessModel->create([
@@ -202,7 +209,7 @@ class Run extends Base
 
                 } else {
                     throw new CommandMisconfiguredException(
-                        'Cron command "' . $sClass . '" misconfigured'
+                        'Cron command "' . $sClass . '" misconfigured; no task configured'
                     );
                 }
 
@@ -223,15 +230,17 @@ class Run extends Base
                     $oProcessModel->delete($iProcessId);
                 }
 
-                $iTimerEnd = microtime(true) * 10000;
-                $iDuration = ($iTimerEnd - $iTimerStart) / 10000;
+                if (!empty($iTimerStart)) {
+                    $iTimerEnd = microtime(true) * 10000;
+                    $iDuration = ($iTimerEnd - $iTimerStart) / 10000;
 
-                $this->oOutput->writeln(
-                    '↳ Job completed in <info>' . $iDuration . '</info> seconds'
-                );
-                $this->oOutput->writeln(
-                    '↳ Memory usage: ' . formatBytes(memory_get_usage())
-                );
+                    $this->oOutput->writeln(
+                        '↳ Job completed in <info>' . $iDuration . '</info> seconds'
+                    );
+                    $this->oOutput->writeln(
+                        '↳ Memory usage: ' . formatBytes(memory_get_usage())
+                    );
+                }
 
                 $oDb->flushCache();
             }

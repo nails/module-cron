@@ -10,11 +10,11 @@ namespace Nails\Cron\Command;
 abstract class Base
 {
     /**
-     * The maximum number of simultaneous processes which cron will execute
+     * The cron expression of when to run
      *
-     * @var int
+     * @var string
      */
-    const MAX_PROCESSES = INF;
+    const CRON_EXPRESSION = null;
 
     /**
      * The console command to execute
@@ -30,45 +30,10 @@ abstract class Base
      */
     const CONSOLE_ARGUMENTS = [];
 
-    // --------------------------------------------------------------------------
-
     /**
-     * Helper function for specifying a command should run every minute
+     * The maximum number of simultaneous processes which  will be executed
      *
-     * @return bool
+     * @var int
      */
-    protected function shouldRunEveryMinute(): bool
-    {
-        return true;
-    }
-
-    // --------------------------------------------------------------------------
-
-    /**
-     * Helper function for specifying a command should run every hour
-     *
-     * @return bool
-     */
-    /**
-     * @param \DateTime $oNow     The current time
-     * @param int[]     $aMinutes The minutes on which this item should run
-     *
-     * @return bool
-     */
-    protected function shouldRunEveryHour(\DateTime $oNow, array $aMinutes = [0]): bool
-    {
-        $iNowMinute = (int) $oNow->format('i');
-        foreach ($aMinutes as $iMinute) {
-            if ($iNowMinute === $iMinute) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // --------------------------------------------------------------------------
-
-    //  @todo (Pablo - 2019-05-17) - shouldRunEveryDay($iHour, $iMinute)
-    //  @todo (Pablo - 2019-05-17) - shouldRunEveryWeek($iDay, $iHour, $iMinute)
-    //  @todo (Pablo - 2019-05-17) - shouldRunEveryMonth($iMonth, $iDay, $iHour, $iMinute)
+    const MAX_PROCESSES = INF;
 }
