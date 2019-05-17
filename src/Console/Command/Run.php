@@ -24,7 +24,6 @@ use Nails\Components;
 use Nails\Console\Command\Base;
 use Nails\Cron\Exception\Command\CommandMisconfiguredException;
 use Nails\Cron\Exception\CronException;
-use Nails\Cron\Interfaces\Command;
 use Nails\Cron\Model\Process;
 use Nails\Factory;
 use RecursiveDirectoryIterator;
@@ -155,7 +154,7 @@ class Run extends Base
 
         //  Sort the processes for easy counting
         $aProcesses = $oProcessModel->getAll();
-        /** @var Command[] $aActiveProcesses */
+        /** @var int[] $aActiveProcesses */
         $aActiveProcesses = [];
 
         /** @var \Nails\Cron\Resource\Process $oProcess */
