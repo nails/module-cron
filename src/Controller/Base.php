@@ -75,6 +75,7 @@ abstract class Base extends BaseMiddle
 
     /**
      * Writes a line to the log
+     *
      * @param string $sLine the line to write
      */
     protected function writeLog($sLine)

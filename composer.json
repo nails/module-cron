@@ -28,7 +28,8 @@
     "require":
     {
         "nails/common": "dev-develop",
-        "nails/module-console": "dev-develop"
+        "nails/module-console": "dev-develop",
+        "dragonmantank/cron-expression": "^2.3"
     },
     "require-dev":
     {

@@ -3,9 +3,16 @@
 namespace Nails\Cron\Console\Command;
 
 use Nails\Common\Factory\Component;
+use Nails\Common\Interfaces\ErrorHandlerDriver;
+use Nails\Common\Service\Database;
+use Nails\Common\Service\ErrorHandler;
 use Nails\Components;
 use Nails\Console\Command\Base;
+use Nails\Console\Exception\ConsoleException;
+use Nails\Cron\Exception\Command\CommandMisconfiguredException;
+use Nails\Cron\Exception\CronException;
 use Nails\Cron\Interfaces\Command;
+use Nails\Cron\Model\Process;
 use Nails\Factory;
 use Nails\Common\Exception\FactoryException;
 use Symfony\Component\Console\Input\InputArgument;
@@ -52,9 +59,13 @@ class Run extends Base
     {
         parent::execute($oInput, $oOutput);
 
+        $this->banner('Nails Cron Runner');
+
         $this
             ->discoverCommands()
             ->runCommands();
+
+        $this->banner('Finished processing all cron commands');
 
         return self::EXIT_CODE_SUCCESS;
     }
@@ -68,6 +79,8 @@ class Run extends Base
      */
     protected function discoverCommands(): Run
     {
+        $this->oOutput->write('Discovering commands... ');
+
         /** @var Component $oComponent */
         foreach (Components::available() as $oComponent) {
 
@@ -100,6 +113,8 @@ class Run extends Base
             }
         }
 
+        $this->oOutput->writeln('found <info>' . count($this->aCommands) . '</info> commands');
+
         return $this;
     }
 
@@ -113,14 +128,112 @@ class Run extends Base
      */
     protected function runCommands(): Run
     {
+        /** @var \DateTime $oNow */
         $oNow = Factory::factory('DateTime');
+        /** @var Database $oDb */
+        $oDb = Factory::service('Database');
+        /** @var Process $oProcessModel */
+        $oProcessModel = Factory::model('Process', 'nails/module-cron');
 
-        /** @var Command $oCommand */
+        //  Sort the processes for easy counting
+        $aProcesses = $oProcessModel->getAll();
+        /** @var Command[] $aActiveProcesses */
+        $aActiveProcesses = [];
+
+        /** @var \Nails\Cron\Resource\Process $oProcess */
+        foreach ($aProcesses as $oProcess) {
+            if (!array_key_exists($oProcess->class, $aActiveProcesses)) {
+                $aActiveProcesses[$oProcess->class] = 0;
+            }
+            $aActiveProcesses[$oProcess->class]++;
+        }
+
+        /** @var \Nails\Cron\Command\Base $oCommand */
         foreach ($this->aCommands as $oCommand) {
-            if ($oCommand->shouldRun($oNow)) {
-                //  @todo (Pablo - 2019-05-16) - Execute the controlelr
-                //  @todo (Pablo - 2019-05-16) - Support running console commands
-                //  @todo (Pablo - 2019-05-16) - Support closures
+
+            $sClass = get_class($oCommand);
+            $this->oOutput->write('<info>' . $sClass . '</info>... ');
+
+            //  Ensure that there is space for the process to run
+            if (getFromArray($sClass, $aActiveProcesses, 0) >= $oCommand::MAX_PROCESSES) {
+                $this->oOutput->writeln('reached maximum allowed number of process');
+                continue;
+            }
+
+            if (!$oCommand->shouldRun($oNow)) {
+                $this->oOutput->writeln('not time to run');
+                continue;
+            }
+
+            try {
+
+                $this->oOutput->writeln('allowed to run');
+                $iTimerStart = microtime(true) * 10000;
+
+                $iProcessId = $oProcessModel->create([
+                    'class' => $sClass,
+                ]);
+
+                if (!empty($oCommand::CONSOLE_COMMAND)) {
+
+                    $this->oOutput->writeln(
+                        '↳ executing: <info>' . $oCommand::CONSOLE_COMMAND . ' ' . implode(' ', $oCommand::CONSOLE_ARGUMENTS) . '</info>'
+                    );
+                    $iResult = $this->callCommand(
+                        $oCommand::CONSOLE_COMMAND,
+                        $oCommand::CONSOLE_ARGUMENTS,
+                        false
+                    );
+
+                    if ($iResult !== static::EXIT_CODE_SUCCESS) {
+                        throw new CronException(
+                            'Command failed with error code ' . $iResult
+                        );
+                    }
+
+                } elseif (method_exists($oCommand, 'execute')) {
+
+                    $this->oOutput->writeln(
+                        '↳ executing: <info>' . $sClass . '->execute()</info>'
+                    );
+                    $oCommand->execute(
+                        $this->oOutput
+                    );
+
+                } else {
+                    throw new CommandMisconfiguredException(
+                        'Cron command "' . $sClass . '" misconfigured'
+                    );
+                }
+
+            } catch (\Exception $e) {
+
+                $this->oOutput->writeln(
+                    '↳ <error>Error: ' . $e->getMessage() . '</error>'
+                );
+
+                /** @var ErrorHandler $oErrorHandlerService */
+                $oErrorHandlerService = Factory::service('ErrorHandler');
+                /** @var ErrorHandlerDriver $sDriver */
+                $sDriver = $oErrorHandlerService::getDriverClass();
+                $sDriver::exception($e, false);
+
+            } finally {
+                if (!empty($iProcessId)) {
+                    $oProcessModel->delete($iProcessId);
+                }
+
+                $iTimerEnd = microtime(true) * 10000;
+                $iDuration = ($iTimerEnd - $iTimerStart) / 10000;
+
+                $this->oOutput->writeln(
+                    '↳ Job completed in <info>' . $iDuration . '</info> seconds'
+                );
+                $this->oOutput->writeln(
+                    '↳ Memory usage: ' . formatBytes(memory_get_usage())
+                );
+
+                $oDb->flushCache();
             }
         }
 
