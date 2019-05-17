@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * Cron Exception
+ *
+ * @package     Nails
+ * @subpackage  module-cron
+ * @category    Exceptions
+ * @author      Nails Dev Team
+ */
+
 namespace Nails\Cron\Exception;
 
 use Nails\Common\Exception\NailsException;

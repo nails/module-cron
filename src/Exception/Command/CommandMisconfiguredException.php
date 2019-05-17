@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * Command Misconfigured Exception
+ *
+ * @package     Nails
+ * @subpackage  module-cron
+ * @category    Exceptions
+ * @author      Nails Dev Team
+ */
+
 namespace Nails\Cron\Exception\Command;
 
 use Nails\Cron\Exception\CronException;

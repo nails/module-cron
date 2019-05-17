@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * Process Model
+ *
+ * @package     Nails
+ * @subpackage  module-cron
+ * @category    Models
+ * @author      Nails Dev Team
+ */
+
 namespace Nails\Cron\Model;
 
 use Nails\Common\Model\Base;

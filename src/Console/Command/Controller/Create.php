@@ -1,5 +1,16 @@
 <?php
 
+/**
+ * The class provides the ability to create cron controllers
+ *
+ * @package     Nails
+ * @subpackage  module-common
+ * @category    Console
+ * @author      Nails Dev Team
+ */
+
+//  @todo (Pablo - 2019-05-17) - Update this to create commands compatible with the cron runner
+
 namespace Nails\Cron\Console\Command\Controller;
 
 use Nails\Console\Command\BaseMaker;

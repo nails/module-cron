@@ -1,22 +1,36 @@
 <?php
 
+/**
+ * The class is the cron runner
+ *
+ * @package     Nails
+ * @subpackage  module-common
+ * @category    Console
+ * @author      Nails Dev Team
+ */
+
 namespace Nails\Cron\Console\Command;
 
 use Cron\CronExpression;
+use DateTime;
+use Exception;
+use Nails\Common\Exception\FactoryException;
+use Nails\Common\Exception\ModelException;
 use Nails\Common\Factory\Component;
 use Nails\Common\Interfaces\ErrorHandlerDriver;
 use Nails\Common\Service\Database;
 use Nails\Common\Service\ErrorHandler;
 use Nails\Components;
 use Nails\Console\Command\Base;
-use Nails\Console\Exception\ConsoleException;
 use Nails\Cron\Exception\Command\CommandMisconfiguredException;
 use Nails\Cron\Exception\CronException;
 use Nails\Cron\Interfaces\Command;
 use Nails\Cron\Model\Process;
 use Nails\Factory;
-use Nails\Common\Exception\FactoryException;
-use Symfony\Component\Console\Input\InputArgument;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use RecursiveRegexIterator;
+use RegexIterator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -55,6 +69,8 @@ class Run extends Base
      * @param OutputInterface $oOutput The Output Interface provided by Symfony
      *
      * @return int
+     * @throws FactoryException
+     * @throws ModelException
      */
     protected function execute(InputInterface $oInput, OutputInterface $oOutput): int
     {
@@ -96,9 +112,9 @@ class Run extends Base
 
                 if (is_dir($sCronPath)) {
 
-                    $oDirectory = new \RecursiveDirectoryIterator($sCronPath);
-                    $oIterator  = new \RecursiveIteratorIterator($oDirectory);
-                    $oRegex     = new \RegexIterator($oIterator, '/^.+\.php$/i', \RecursiveRegexIterator::GET_MATCH);
+                    $oDirectory = new RecursiveDirectoryIterator($sCronPath);
+                    $oIterator  = new RecursiveIteratorIterator($oDirectory);
+                    $oRegex     = new RegexIterator($oIterator, '/^.+\.php$/i', RecursiveRegexIterator::GET_MATCH);
 
                     foreach ($oRegex as $aItem) {
 
@@ -122,14 +138,15 @@ class Run extends Base
     // --------------------------------------------------------------------------
 
     /**
-     * Executes definitons which satisfy the timestamp
+     * Executes definitions which satisfy the timestamp
      *
      * @return Run
      * @throws FactoryException
+     * @throws ModelException
      */
     protected function runCommands(): Run
     {
-        /** @var \DateTime $oNow */
+        /** @var DateTime $oNow */
         $oNow = Factory::factory('DateTime');
         /** @var Database $oDb */
         $oDb = Factory::service('Database');
@@ -213,7 +230,7 @@ class Run extends Base
                     );
                 }
 
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
 
                 $this->oOutput->writeln(
                     '↳ <error>Error: ' . $e->getMessage() . '</error>'

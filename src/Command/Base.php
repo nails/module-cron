@@ -1,5 +1,14 @@
 <?php
 
+/**
+ * The class is the basis of all cron commands
+ *
+ * @package     Nails
+ * @subpackage  module-common
+ * @category    Commands
+ * @author      Nails Dev Team
+ */
+
 namespace Nails\Cron\Command;
 
 /**
