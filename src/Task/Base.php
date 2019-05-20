@@ -1,23 +1,30 @@
 <?php
 
 /**
- * The class is the basis of all cron commands
+ * The class is the basis of all cron tasks
  *
  * @package     Nails
  * @subpackage  module-common
- * @category    Commands
+ * @category    Tasks
  * @author      Nails Dev Team
  */
 
-namespace Nails\Cron\Command;
+namespace Nails\Cron\Task;
 
 /**
  * Class Base
  *
- * @package Nails\Cron\Command
+ * @package Nails\Cron\Task
  */
 abstract class Base
 {
+    /**
+     * Description of the task
+     *
+     * @var string
+     */
+    const DESCRIPTION = '';
+
     /**
      * The cron expression of when to run
      *

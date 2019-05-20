@@ -1,7 +1,7 @@
 <?php
 
 /**
- * The class provides the ability to create cron controllers
+ * The class provides the ability to create cron tasks
  *
  * @package     Nails
  * @subpackage  module-common
@@ -9,12 +9,12 @@
  * @author      Nails Dev Team
  */
 
-namespace Nails\Cron\Console\Command\Controller;
+namespace Nails\Cron\Console\Command\Task;
 
 use Nails\Common\Exception\NailsException;
 use Nails\Console\Command\BaseMaker;
 use Nails\Console\Exception\ConsoleException;
-use Nails\Cron\Exception\Console\ControllerExistsException;
+use Nails\Cron\Exception\Console\TaskExistsException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -23,12 +23,12 @@ use Exception;
 /**
  * Class Create
  *
- * @package Nails\Cron\Console\Command\Controller
+ * @package Nails\Cron\Console\Command\Task
  */
 class Create extends BaseMaker
 {
     const RESOURCE_PATH   = NAILS_PATH . 'module-cron/resources/console/';
-    const CONTROLLER_PATH = NAILS_APP_PATH . 'src/Cron/';
+    const TASK_PATH = NAILS_APP_PATH . 'src/Cron/Task/';
 
     // --------------------------------------------------------------------------
 
@@ -38,12 +38,12 @@ class Create extends BaseMaker
     protected function configure(): void
     {
         $this
-            ->setName('make:controller:cron')
-            ->setDescription('Creates a new App cron controller')
+            ->setName('make:cron:task')
+            ->setDescription('Creates a new app cron task')
             ->addArgument(
                 'className',
                 InputArgument::OPTIONAL,
-                'Define the name of the cron controller'
+                'Define the name of the cron task'
             );
     }
 
@@ -65,8 +65,8 @@ class Create extends BaseMaker
 
         try {
             $this
-                ->createPath(self::CONTROLLER_PATH)
-                ->createController();
+                ->createPath(self::TASK_PATH)
+                ->createTask();
         } catch (Exception $e) {
             return $this->abort(
                 self::EXIT_CODE_FAILURE,
@@ -92,13 +92,13 @@ class Create extends BaseMaker
     // --------------------------------------------------------------------------
 
     /**
-     * Create the Controller
+     * Create the task
      *
      * @return $this
      * @throws ConsoleException
      * @throws NailsException
      */
-    private function createController(): self
+    private function createTask(): self
     {
         $aFields  = $this->getArguments();
         $aCreated = [];
@@ -106,17 +106,17 @@ class Create extends BaseMaker
         try {
 
             $aToCreate    = [];
-            $aControllers = array_filter(
-                array_map(function ($sController) {
-                    return implode('/', array_map('ucfirst', explode('/', ucfirst(trim($sController)))));
+            $aTasks = array_filter(
+                array_map(function ($sTask) {
+                    return implode('/', array_map('ucfirst', explode('/', ucfirst(trim($sTask)))));
                 }, explode(',', $aFields['CLASS_NAME']))
             );
 
-            sort($aControllers);
+            sort($aTasks);
 
-            foreach ($aControllers as $sController) {
+            foreach ($aTasks as $sTask) {
 
-                $aClassBits = explode('/', $sController);
+                $aClassBits = explode('/', $sTask);
                 $aClassBits = array_map('ucfirst', $aClassBits);
 
                 $sNamespace     = $this->generateNamespace($aClassBits);
@@ -126,8 +126,8 @@ class Create extends BaseMaker
 
                 //  Test it does not already exist
                 if (file_exists($sFilePath)) {
-                    throw new ControllerExistsException(
-                        'A controller at "' . $sFilePath . '" already exists'
+                    throw new TaskExistsException(
+                        'A task at "' . $sFilePath . '" already exists'
                     );
                 }
 
@@ -140,7 +140,7 @@ class Create extends BaseMaker
                 ];
             }
 
-            $this->oOutput->writeln('The following controller(s) will be created:');
+            $this->oOutput->writeln('The following task(s) will be created:');
             foreach ($aToCreate as $aConfig) {
                 $this->oOutput->writeln('');
                 $this->oOutput->writeln('Class: <info>' . $aConfig['CLASS_NAME_FULL'] . '</info>');
@@ -150,14 +150,12 @@ class Create extends BaseMaker
 
             if ($this->confirm('Continue?', true)) {
                 $this->oOutput->writeln('');
-
-                //  Generate Controllers
                 foreach ($aToCreate as $aConfig) {
-                    $this->oOutput->write('Creating controller <comment>' . $aConfig['CLASS_NAME_FULL'] . '</comment>... ');
+                    $this->oOutput->write('Creating task <comment>' . $aConfig['CLASS_NAME_FULL'] . '</comment>... ');
                     $this->createPath($aConfig['DIRECTORY']);
                     $this->createFile(
                         $aConfig['FILE_PATH'],
-                        $this->getResource('template/controller.php', $aConfig)
+                        $this->getResource('template/task.php', $aConfig)
                     );
                     $aCreated[] = $aConfig['FILE_PATH'];
                     $this->oOutput->writeln('<info>done!</info>');
@@ -168,7 +166,6 @@ class Create extends BaseMaker
 
         } catch (ConsoleException $e) {
             $this->oOutput->writeln('<error>failed!</error>');
-            //  Clean up created controllers
             if (!empty($aCreated)) {
                 $this->oOutput->writeln('<error>Cleaning up - removing newly created files</error>');
                 foreach ($aCreated as $sPath) {
@@ -207,7 +204,7 @@ class Create extends BaseMaker
     protected function generateNamespace(array $aClassBits): string
     {
         array_pop($aClassBits);
-        return implode('\\', array_merge(['App', 'Cron'], $aClassBits));
+        return implode('\\', array_merge(['App', 'Cron', 'Task'], $aClassBits));
     }
 
     // --------------------------------------------------------------------------
@@ -229,7 +226,7 @@ class Create extends BaseMaker
                     return rtrim($sItem, DIRECTORY_SEPARATOR);
                 },
                 array_merge(
-                    [static::CONTROLLER_PATH],
+                    [static::TASK_PATH],
                     $aClassBits,
                     [$sClassName . '.php']
                 )

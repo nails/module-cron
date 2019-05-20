@@ -16,19 +16,23 @@ use DateTime;
 use Exception;
 use Nails\Common\Exception\FactoryException;
 use Nails\Common\Exception\ModelException;
+use Nails\Common\Exception\NailsException;
 use Nails\Common\Factory\Component;
 use Nails\Common\Interfaces\ErrorHandlerDriver;
 use Nails\Common\Service\Database;
 use Nails\Common\Service\ErrorHandler;
+use Nails\Common\Service\Event;
 use Nails\Components;
 use Nails\Console\Command\Base;
-use Nails\Cron\Exception\Command\CommandMisconfiguredException;
+use Nails\Cron\Events;
 use Nails\Cron\Exception\CronException;
+use Nails\Cron\Exception\Task\TaskMisconfiguredException;
 use Nails\Cron\Model\Process;
 use Nails\Factory;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RecursiveRegexIterator;
+use ReflectionException;
 use RegexIterator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -41,11 +45,18 @@ use Symfony\Component\Console\Output\OutputInterface;
 class Run extends Base
 {
     /**
-     * Discovered commands
+     * Discovered tasks
      *
      * @var array
      */
-    private $aCommands = [];
+    private $aTasks = [];
+
+    /**
+     * The event service
+     *
+     * @var Event
+     */
+    private $oEventService;
 
     // --------------------------------------------------------------------------
 
@@ -56,7 +67,7 @@ class Run extends Base
     {
         $this
             ->setName('cron:run')
-            ->setDescription('The cron runner');
+            ->setDescription('Executes due cron tasks');
     }
 
     // --------------------------------------------------------------------------
@@ -70,6 +81,8 @@ class Run extends Base
      * @return int
      * @throws FactoryException
      * @throws ModelException
+     * @throws NailsException
+     * @throws ReflectionException
      */
     protected function execute(InputInterface $oInput, OutputInterface $oOutput): int
     {
@@ -77,11 +90,20 @@ class Run extends Base
 
         $this->banner('Nails Cron Runner');
 
-        $this
-            ->discoverCommands()
-            ->runCommands();
+        /** @var Event oEventService */
+        $this->oEventService = Factory::service('Event');
 
-        $this->banner('Finished processing all cron commands');
+        $this->oEventService->trigger(Events::CRON_START, Events::getEventNamespace());
+
+        static::discoverTasks($oOutput, $this->aTasks);
+
+        $this->oEventService->trigger(Events::CRON_READY, Events::getEventNamespace(), [$this->aTasks]);
+
+        $this->runTasks();
+
+        $this->oEventService->trigger(Events::CRON_FINISH, Events::getEventNamespace());
+
+        $this->banner('Finished processing all cron tasks');
 
         return self::EXIT_CODE_SUCCESS;
     }
@@ -89,13 +111,16 @@ class Run extends Base
     // --------------------------------------------------------------------------
 
     /**
-     * Looks for valid Cron definitions
+     * Looks for valid Cron tasks
      *
-     * @return Run
+     * @param OutputInterface $oOutput The output interface
+     * @param array           $aTasks  The task array to populate
+     *
+     * @throws FactoryException
      */
-    protected function discoverCommands(): Run
+    public static function discoverTasks(OutputInterface $oOutput, array &$aTasks): void
     {
-        $this->oOutput->write('Discovering commands... ');
+        $oOutput->write('Discovering tasks... ');
 
         /** @var Component $oComponent */
         foreach (Components::available() as $oComponent) {
@@ -107,43 +132,45 @@ class Run extends Base
 
             foreach ($aNamespaceRoots as $sPath) {
 
-                $sCronPath = $sPath . DIRECTORY_SEPARATOR . 'Cron' . DIRECTORY_SEPARATOR;
+                $sTaskPath = $sPath . DIRECTORY_SEPARATOR . 'Cron' . DIRECTORY_SEPARATOR . 'Task' . DIRECTORY_SEPARATOR;
 
-                if (is_dir($sCronPath)) {
+                if (is_dir($sTaskPath)) {
 
-                    $oDirectory = new RecursiveDirectoryIterator($sCronPath);
+                    $oDirectory = new RecursiveDirectoryIterator($sTaskPath);
                     $oIterator  = new RecursiveIteratorIterator($oDirectory);
                     $oRegex     = new RegexIterator($oIterator, '/^.+\.php$/i', RecursiveRegexIterator::GET_MATCH);
 
                     foreach ($oRegex as $aItem) {
 
-                        $sCommandPath = reset($aItem);
-                        $sClassName   = str_replace($sCronPath, '', $sCommandPath);
-                        $sClassName   = $oComponent->namespace . 'Cron\\' . rtrim(str_replace(DIRECTORY_SEPARATOR, '\\', $sClassName), '.php');
+                        $sThisTaskPath = reset($aItem);
+                        $sClassName    = str_replace($sTaskPath, '', $sThisTaskPath);
+                        $sClassName    = $oComponent->namespace . 'Cron\\Task\\' . rtrim(str_replace(DIRECTORY_SEPARATOR, '\\', $sClassName), '.php');
 
-                        if (class_exists($sClassName) && classExtends($sClassName, \Nails\Cron\Command\Base::class)) {
-                            $this->aCommands[] = new $sClassName();
+                        if (class_exists($sClassName) && classExtends($sClassName, \Nails\Cron\Task\Base::class)) {
+                            $aTasks[] = new $sClassName();
                         }
                     }
                 }
             }
         }
 
-        $this->oOutput->writeln('found <info>' . count($this->aCommands) . '</info> commands');
-
-        return $this;
+        $iCount = count($aTasks);
+        Factory::helper('Inflector');
+        $oOutput->writeln('found <info>' . $iCount . '</info> ' . pluralise($iCount, 'task'));
     }
 
     // --------------------------------------------------------------------------
 
     /**
-     * Executes definitions which satisfy the timestamp
+     * Executes tasks which are due
      *
      * @return Run
      * @throws FactoryException
      * @throws ModelException
+     * @throws NailsException
+     * @throws ReflectionException
      */
-    protected function runCommands(): Run
+    protected function runTasks(): Run
     {
         /** @var DateTime $oNow */
         $oNow = Factory::factory('DateTime');
@@ -153,6 +180,7 @@ class Run extends Base
         $oProcessModel = Factory::model('Process', 'nails/module-cron');
 
         //  Sort the processes for easy counting
+        /** @var \Nails\Cron\Resource\Process $aProcesses */
         $aProcesses = $oProcessModel->getAll();
         /** @var int[] $aActiveProcesses */
         $aActiveProcesses = [];
@@ -165,26 +193,28 @@ class Run extends Base
             $aActiveProcesses[$oProcess->class]++;
         }
 
-        /** @var \Nails\Cron\Command\Base $oCommand */
-        foreach ($this->aCommands as $oCommand) {
+        /** @var \Nails\Cron\Task\Base $oTask */
+        foreach ($this->aTasks as $oTask) {
 
             try {
 
-                $sClass = get_class($oCommand);
+                $this->oEventService->trigger(Events::CRON_TASK_BEFORE, Events::getEventNamespace(), [$oTask]);
+
+                $sClass = get_class($oTask);
                 $this->oOutput->write('<info>' . $sClass . '</info>... ');
 
                 //  Ensure that there is space for the process to run
-                if (getFromArray($sClass, $aActiveProcesses, 0) >= $oCommand::MAX_PROCESSES) {
-                    $this->oOutput->writeln('reached maximum allowed number of process');
+                if (getFromArray($sClass, $aActiveProcesses, 0) >= $oTask::MAX_PROCESSES) {
+                    $this->oOutput->writeln('reached maximum allowed number of process for this task');
                     continue;
-                } elseif (empty($oCommand::CRON_EXPRESSION)) {
+                } elseif (empty($oTask::CRON_EXPRESSION)) {
                     $this->oOutput->writeln('');
-                    throw new CommandMisconfiguredException(
-                        'Cron command "' . $sClass . '" misconfigured; CRON_EXPRESSION is empty'
+                    throw new TaskMisconfiguredException(
+                        'Cron task "' . $sClass . '" misconfigured; static::CRON_EXPRESSION is empty'
                     );
                 }
 
-                $oExpression = CronExpression::factory($oCommand::CRON_EXPRESSION);
+                $oExpression = CronExpression::factory($oTask::CRON_EXPRESSION);
                 if (!$oExpression->isDue($oNow)) {
                     $this->oOutput->writeln('not due to run');
                     continue;
@@ -197,35 +227,35 @@ class Run extends Base
                     'class' => $sClass,
                 ]);
 
-                if (!empty($oCommand::CONSOLE_COMMAND)) {
+                if (!empty($oTask::CONSOLE_COMMAND)) {
 
                     $this->oOutput->writeln(
-                        '↳ executing: <info>' . $oCommand::CONSOLE_COMMAND . ' ' . implode(' ', $oCommand::CONSOLE_ARGUMENTS) . '</info>'
+                        '↳ executing: <info>' . $oTask::CONSOLE_COMMAND . ' ' . implode(' ', $oTask::CONSOLE_ARGUMENTS) . '</info>'
                     );
                     $iResult = $this->callCommand(
-                        $oCommand::CONSOLE_COMMAND,
-                        $oCommand::CONSOLE_ARGUMENTS,
+                        $oTask::CONSOLE_COMMAND,
+                        $oTask::CONSOLE_ARGUMENTS,
                         false
                     );
 
                     if ($iResult !== static::EXIT_CODE_SUCCESS) {
                         throw new CronException(
-                            'Command failed with error code ' . $iResult
+                            'Task failed with error code ' . $iResult
                         );
                     }
 
-                } elseif (method_exists($oCommand, 'execute')) {
+                } elseif (method_exists($oTask, 'execute')) {
 
                     $this->oOutput->writeln(
                         '↳ executing: <info>' . $sClass . '->execute()</info>'
                     );
-                    $oCommand->execute(
+                    $oTask->execute(
                         $this->oOutput
                     );
 
                 } else {
-                    throw new CommandMisconfiguredException(
-                        'Cron command "' . $sClass . '" misconfigured; no task configured'
+                    throw new TaskMisconfiguredException(
+                        'Cron task "' . $sClass . '" misconfigured; no task defined'
                     );
                 }
 
@@ -241,7 +271,10 @@ class Run extends Base
                 $sDriver = $oErrorHandlerService::getDriverClass();
                 $sDriver::exception($e, false);
 
+                $this->oEventService->trigger(Events::CRON_TASK_ERROR, Events::getEventNamespace(), [$oTask]);
+
             } finally {
+
                 if (!empty($iProcessId)) {
                     $oProcessModel->delete($iProcessId);
                 }
@@ -259,6 +292,8 @@ class Run extends Base
                 }
 
                 $oDb->flushCache();
+
+                $this->oEventService->trigger(Events::CRON_TASK_AFTER, Events::getEventNamespace(), [$oTask]);
             }
         }
 

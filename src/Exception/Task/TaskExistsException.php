@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Controller Exists Exception
+ * Task Exists Exception
  *
  * @package     Nails
  * @subpackage  module-cron
@@ -9,15 +9,15 @@
  * @author      Nails Dev Team
  */
 
-namespace Nails\Cron\Exception\Console;
+namespace Nails\Cron\Exception\Task;
 
 use Nails\Common\Exception\NailsException;
 
 /**
- * Class ControllerExistsException
+ * Class TaskExistsException
  *
  * @package Nails\Cron\Exception\Console
  */
-class ControllerExistsException extends NailsException
+class TaskExistsException extends NailsException
 {
 }

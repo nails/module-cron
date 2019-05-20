@@ -1,23 +1,23 @@
 <?php
 
 /**
- * This file is the template for the contents of Cron controllers
- * Used by the console command when creating Cron controllers.
+ * This file is the template for the contents of Cron tasks
+ * Used by the console command when creating Cron tasks.
  */
 
 return <<<'EOD'
 <?php
 
 /**
- * The {{CLASS_NAME}} Cron controller
+ * The {{CLASS_NAME}} Cron task
  *
  * @package  App
- * @category controller
+ * @category Task
  */
 
 namespace {{NAMESPACE}};
 
-use Nails\Cron\Controller\Base;
+use Nails\Cron\Task\Base;
 
 /**
  * Class {{CLASS_NAME}}
@@ -26,6 +26,13 @@ use Nails\Cron\Controller\Base;
  */
 class {{CLASS_NAME}} extends Base
 {
+    /**
+     * The task description
+     *
+     * @var string
+     */
+    const DESCRIPTION = '';
+    
     /**
      * The cron expression of when to run
      *

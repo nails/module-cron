@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Command Misconfigured Exception
+ * Task Misconfigured Exception
  *
  * @package     Nails
  * @subpackage  module-cron
@@ -9,16 +9,16 @@
  * @author      Nails Dev Team
  */
 
-namespace Nails\Cron\Exception\Command;
+namespace Nails\Cron\Exception\Task;
 
 use Nails\Cron\Exception\CronException;
 
 /**
- * Class CommandMisconfiguredException
+ * Class TaskMisconfiguredException
  *
  * @package Nails\Cron\Exception\Console
  */
-class CommandMisconfiguredException extends CronException
+class TaskMisconfiguredException extends CronException
 {
     //  @todo (Pablo - 2019-05-17) - Set this
     const DOCUMENTATION_URL = '';

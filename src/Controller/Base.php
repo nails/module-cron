@@ -14,9 +14,9 @@ namespace Nails\Cron\Controller;
 
 use Nails\Cron\Events;
 use Nails\Factory;
- use Nails\Common\Exception\FactoryException;
- use Nails\Common\Exception\NailsException;
- use ReflectionException;
+use Nails\Common\Exception\FactoryException;
+use Nails\Common\Exception\NailsException;
+use ReflectionException;
 
 // --------------------------------------------------------------------------
 
@@ -57,27 +57,12 @@ abstract class Base extends BaseMiddle
     {
         parent::__construct();
 
-        //  Setup Events
-        $oEventService = Factory::service('Event');
-
-        //  Call the CRON:STARTUP event, cron is constructing
-        $oEventService->trigger(Events::CRON_STARTUP, Events::getEventNamespace());
-
-        // --------------------------------------------------------------------------
-
         $this->oCronRouter = $oCronRouter;
-
-        // --------------------------------------------------------------------------
 
         //  By default cron jobs should be long lasting
         if (function_exists('set_time_limit')) {
             set_time_limit(0);
         }
-
-        // --------------------------------------------------------------------------
-
-        //  Call the CRON:READY event, cron is all geared up and ready to go
-        $oEventService->trigger(Events::CRON_READY, Events::getEventNamespace());
     }
 
     // --------------------------------------------------------------------------

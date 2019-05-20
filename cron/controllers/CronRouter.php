@@ -84,7 +84,7 @@ class CronRouter extends BaseMiddle
         $oInput = Factory::service('Input');
         if (Environment::is(Environment::ENV_PROD) && !$oInput::isCli()) {
             header($oInput->server('SERVER_PROTOCOL') . ' 401 Unauthorized');
-            echo '<h1>' . lang('unauthorised') . '</h1>';
+            echo '<h1>Unauthorized</h1>';
             exit(401);
         }
 

@@ -18,10 +18,38 @@ class Events extends Base
     /**
      * Fired when cron starts
      */
-    const CRON_STARTUP = 'CRON:STARTUP';
+    const CRON_START = 'CRON:START';
 
     /**
-     * Fired when cron is ready
+     * Fired when cron is about to start executing tasks
+     *
+     * @param \Nails\Cron\Task\Base[] $aTasks The discovered tasks
      */
     const CRON_READY = 'CRON:READY';
+
+    /**
+     * Fired before each task
+     *
+     * @param \Nails\Cron\Task\Base $oTask The task about to be executed
+     */
+    const CRON_TASK_BEFORE = 'CRON:TASK:BEFORE';
+
+    /**
+     * Fired when a task errors
+     *
+     * @param \Nails\Cron\Task\Base $oTask The task which errored
+     */
+    const CRON_TASK_ERROR = 'CRON:TASK:ERROR';
+
+    /**
+     * Fired after each task
+     *
+     * @param \Nails\Cron\Task\Base $oTask The task which was just executed
+     */
+    const CRON_TASK_AFTER = 'CRON:TASK:AFTER';
+
+    /**
+     * Fired when cron finishes
+     */
+    const CRON_FINISH = 'CRON:FINISH';
 }
