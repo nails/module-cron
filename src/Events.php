@@ -37,7 +37,8 @@ class Events extends Base
     /**
      * Fired when a task errors
      *
-     * @param \Nails\Cron\Task\Base $oTask The task which errored
+     * @param \Nails\Cron\Task\Base $oTask      The task which errored
+     * @param \Exception            $oException The exception which was caught
      */
     const CRON_TASK_ERROR = 'CRON:TASK:ERROR';
 

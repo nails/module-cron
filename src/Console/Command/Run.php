@@ -271,7 +271,11 @@ class Run extends Base
                 $sDriver = $oErrorHandlerService::getDriverClass();
                 $sDriver::exception($e, false);
 
-                $this->oEventService->trigger(Events::CRON_TASK_ERROR, Events::getEventNamespace(), [$oTask]);
+                $this->oEventService->trigger(
+                    Events::CRON_TASK_ERROR,
+                    Events::getEventNamespace(),
+                    [$oTask, $e]
+                );
 
             } finally {
 
