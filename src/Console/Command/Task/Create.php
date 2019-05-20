@@ -14,7 +14,7 @@ namespace Nails\Cron\Console\Command\Task;
 use Nails\Common\Exception\NailsException;
 use Nails\Console\Command\BaseMaker;
 use Nails\Console\Exception\ConsoleException;
-use Nails\Cron\Exception\Console\TaskExistsException;
+use Nails\Cron\Exception\Task\TaskExistsException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;

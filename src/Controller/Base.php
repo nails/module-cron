@@ -12,8 +12,6 @@
 
 namespace Nails\Cron\Controller;
 
-use Nails\Cron\Events;
-use Nails\Factory;
 use Nails\Common\Exception\FactoryException;
 use Nails\Common\Exception\NailsException;
 use ReflectionException;
