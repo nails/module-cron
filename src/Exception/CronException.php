@@ -1,19 +1,23 @@
 <?php
 
 /**
- * Controller Exists Exception
+ * Cron Exception
  *
  * @package     Nails
  * @subpackage  module-cron
  * @category    Exceptions
  * @author      Nails Dev Team
- * @link
  */
 
-namespace Nails\Cron\Exception\Console;
+namespace Nails\Cron\Exception;
 
 use Nails\Common\Exception\NailsException;
 
-class ControllerExistsException extends NailsException
+/**
+ * Class CronException
+ *
+ * @package Nails\Cron\Exception
+ */
+class CronException extends NailsException
 {
 }

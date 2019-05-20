@@ -5,7 +5,7 @@
  *
  * @package     Nails
  * @subpackage  module-cron
- * @category    Controller
+ * @category    Routes
  * @author      Nails Dev Team
  * @link
  */
@@ -14,6 +14,11 @@ namespace Nails\Cron;
 
 use Nails\Common\Interfaces\RouteGenerator;
 
+/**
+ * Class Routes
+ *
+ * @package Nails\Cron
+ */
 class Routes implements RouteGenerator
 {
     /**
