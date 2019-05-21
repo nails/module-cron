@@ -25,6 +25,7 @@ use Nails\Common\Service\Event;
 use Nails\Common\Service\Logger;
 use Nails\Components;
 use Nails\Console\Command\Base;
+use Nails\Cron\Console\Output\LoggerOutput;
 use Nails\Cron\Events;
 use Nails\Cron\Exception\CronException;
 use Nails\Cron\Exception\Task\TaskMisconfiguredException;
@@ -96,7 +97,7 @@ class Run extends Base
     protected function execute(InputInterface $oInput, OutputInterface $oOutput): int
     {
         if (!$oInput->getOption('output')) {
-            $oOutput = $this->getOutputInterface();
+            $oOutput = new LoggerOutput();
         }
 
         parent::execute($oInput, $oOutput);
@@ -124,30 +125,6 @@ class Run extends Base
         }
 
         return self::EXIT_CODE_SUCCESS;
-    }
-
-    // --------------------------------------------------------------------------
-
-    /**
-     * Returns an output interface which will write to a Nails Log File
-     *
-     * @return OutputInterface
-     * @throws FactoryException
-     *
-     * @todo (Pablo - 2019-05-21) - Prefix all lines with a timestamp
-     */
-    protected function getOutputInterface(): OutputInterface
-    {
-        /** @var DateTime $oNow */
-        $oNow = Factory::factory('DateTime');
-        /** @var Logger $oLogger */
-        $oLogger = Factory::service('Logger');
-
-        //  Set a cron log file for today and write to it to ensure it exists
-        $oLogger->setFile('cron-' . $oNow->format('Y-m-d') . '.php');
-        $oLogger->line('Starting Cron Runner');
-
-        return new StreamOutput($oLogger->getStream());
     }
 
     // --------------------------------------------------------------------------
