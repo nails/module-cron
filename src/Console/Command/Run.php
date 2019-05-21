@@ -36,6 +36,7 @@ use RecursiveRegexIterator;
 use ReflectionException;
 use RegexIterator;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
 
@@ -69,7 +70,13 @@ class Run extends Base
     {
         $this
             ->setName('cron:run')
-            ->setDescription('Executes due cron tasks');
+            ->setDescription('Executes due cron tasks')
+            ->addOption(
+                'output',
+                null,
+                InputOption::VALUE_NONE,
+                'Send output to the terminal (rather than the log file)'
+            );
     }
 
     // --------------------------------------------------------------------------
@@ -88,7 +95,10 @@ class Run extends Base
      */
     protected function execute(InputInterface $oInput, OutputInterface $oOutput): int
     {
-        $oOutput = $this->getOutputInterface();
+        if (!$oInput->getOption('output')) {
+            $oOutput = $this->getOutputInterface();
+        }
+
         parent::execute($oInput, $oOutput);
 
         $this->banner('Nails Cron Runner');
@@ -108,8 +118,10 @@ class Run extends Base
 
         $this->banner('Finished processing all cron tasks');
 
-        $oLogger = Factory::service('Logger');
-        $oLogger->line('Finished Cron Runner');
+        if (!$oInput->getOption('output')) {
+            $oLogger = Factory::service('Logger');
+            $oLogger->line('Finished Cron Runner');
+        }
 
         return self::EXIT_CODE_SUCCESS;
     }
