@@ -9,7 +9,7 @@ namespace Nails\Database\Migration\Nails\ModuleCron;
 
 use Nails\Common\Console\Migrate\Base;
 
-class Migration1 extends Base
+class Migration2 extends Base
 {
     /**
      * Execute the migration
