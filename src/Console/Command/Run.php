@@ -22,6 +22,7 @@ use Nails\Common\Interfaces\ErrorHandlerDriver;
 use Nails\Common\Service\Database;
 use Nails\Common\Service\ErrorHandler;
 use Nails\Common\Service\Event;
+use Nails\Common\Service\Logger;
 use Nails\Components;
 use Nails\Console\Command\Base;
 use Nails\Cron\Events;
@@ -36,6 +37,7 @@ use ReflectionException;
 use RegexIterator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Output\StreamOutput;
 
 /**
  * Class Run
@@ -86,6 +88,7 @@ class Run extends Base
      */
     protected function execute(InputInterface $oInput, OutputInterface $oOutput): int
     {
+        $oOutput = $this->getOutputInterface();
         parent::execute($oInput, $oOutput);
 
         $this->banner('Nails Cron Runner');
@@ -105,7 +108,34 @@ class Run extends Base
 
         $this->banner('Finished processing all cron tasks');
 
+        $oLogger = Factory::service('Logger');
+        $oLogger->line('Finished Cron Runner');
+
         return self::EXIT_CODE_SUCCESS;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns an output interface which will write to a Nails Log File
+     *
+     * @return OutputInterface
+     * @throws FactoryException
+     *
+     * @todo (Pablo - 2019-05-21) - Prefix all lines with a timestamp
+     */
+    protected function getOutputInterface(): OutputInterface
+    {
+        /** @var DateTime $oNow */
+        $oNow = Factory::factory('DateTime');
+        /** @var Logger $oLogger */
+        $oLogger = Factory::service('Logger');
+
+        //  Set a cron log file for today and write to it to ensure it exists
+        $oLogger->setFile('cron-' . $oNow->format('Y-m-d') . '.php');
+        $oLogger->line('Starting Cron Runner');
+
+        return new StreamOutput($oLogger->getStream());
     }
 
     // --------------------------------------------------------------------------
@@ -229,6 +259,10 @@ class Run extends Base
 
                 if (!empty($oTask::CONSOLE_COMMAND)) {
 
+                    $oNow = Factory::factory('DateTime');
+                    $this->oOutput->writeln(
+                        '↳ started at: <info>' . $oNow->format('Y-m-d H:i:s') . '</info>'
+                    );
                     $this->oOutput->writeln(
                         '↳ executing: <info>' . $oTask::CONSOLE_COMMAND . ' ' . implode(' ', $oTask::CONSOLE_ARGUMENTS) . '</info>'
                     );
@@ -287,6 +321,10 @@ class Run extends Base
                     $iTimerEnd = microtime(true) * 10000;
                     $iDuration = ($iTimerEnd - $iTimerStart) / 10000;
 
+                    $oNow = Factory::factory('DateTime');
+                    $this->oOutput->writeln(
+                        '↳ finished at: <info>' . $oNow->format('Y-m-d H:i:s') . '</info>'
+                    );
                     $this->oOutput->writeln(
                         '↳ Job completed in <info>' . $iDuration . '</info> seconds'
                     );
