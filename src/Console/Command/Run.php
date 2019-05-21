@@ -174,7 +174,7 @@ class Run extends Base
         }
 
         $iCount = count($aTasks);
-        Factory::helper('Inflector');
+        Factory::helper('inflector');
         $oOutput->writeln('found <info>' . $iCount . '</info> ' . pluralise($iCount, 'task'));
     }
 
