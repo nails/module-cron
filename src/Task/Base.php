@@ -52,4 +52,11 @@ abstract class Base
      * @var int
      */
     const MAX_PROCESSES = INF;
+
+    /**
+     * Which environments to run the task on, leave empty to run on every environment
+     *
+     * @var string[]
+     */
+    const ENVIRONMENT = [];
 }

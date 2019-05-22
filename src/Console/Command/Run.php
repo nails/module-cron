@@ -22,7 +22,6 @@ use Nails\Common\Interfaces\ErrorHandlerDriver;
 use Nails\Common\Service\Database;
 use Nails\Common\Service\ErrorHandler;
 use Nails\Common\Service\Event;
-use Nails\Common\Service\Logger;
 use Nails\Components;
 use Nails\Console\Command\Base;
 use Nails\Cron\Console\Output\LoggerOutput;
@@ -30,6 +29,7 @@ use Nails\Cron\Events;
 use Nails\Cron\Exception\CronException;
 use Nails\Cron\Exception\Task\TaskMisconfiguredException;
 use Nails\Cron\Model\Process;
+use Nails\Environment;
 use Nails\Factory;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -39,7 +39,6 @@ use RegexIterator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Output\StreamOutput;
 
 /**
  * Class Run
@@ -237,9 +236,12 @@ class Run extends Base
                 if (!$oExpression->isDue($oNow)) {
                     $this->oOutput->writeln('not due to run');
                     continue;
+                } elseif (!empty($oTask::ENVIRONMENT) && !in_array(Environment::get(), $oTask::ENVIRONMENT)) {
+                    $this->oOutput->writeln('due to run, but not on ' . Environment::get());
+                    continue;
                 }
 
-                $this->oOutput->writeln('due to run');
+                $this->oOutput->writeln('');
                 $iTimerStart = microtime(true) * 10000;
 
                 $iProcessId = $oProcessModel->create([
@@ -309,6 +311,8 @@ class Run extends Base
                 if (!empty($iTimerStart)) {
                     $iTimerEnd = microtime(true) * 10000;
                     $iDuration = ($iTimerEnd - $iTimerStart) / 10000;
+                    //  Reset the start timer
+                    $iTimerStart = null;
 
                     $oNow = Factory::factory('DateTime');
                     $this->oOutput->writeln(
