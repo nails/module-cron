@@ -162,7 +162,7 @@ class Run extends Base
 
                         $sThisTaskPath = reset($aItem);
                         $sClassName    = str_replace($sTaskPath, '', $sThisTaskPath);
-                        $sClassName    = $oComponent->namespace . 'Cron\\Task\\' . rtrim(str_replace(DIRECTORY_SEPARATOR, '\\', $sClassName), '.php');
+                        $sClassName    = $oComponent->namespace . 'Cron\\Task\\' . preg_replace('/\.php$/', '', str_replace(DIRECTORY_SEPARATOR, '\\', $sClassName));
 
                         if (class_exists($sClassName) && classExtends($sClassName, \Nails\Cron\Task\Base::class)) {
                             $aTasks[] = new $sClassName();
