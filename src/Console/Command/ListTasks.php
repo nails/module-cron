@@ -62,7 +62,11 @@ class ListTasks extends Base
             $oOutput->writeln('Expression:  <info>' . $oTask::CRON_EXPRESSION . '</info>');
 
             if ($oTask::CONSOLE_COMMAND) {
-                $oOutput->writeln('Executes:    <info>' . $oTask::CONSOLE_COMMAND . ' ' . implode(' ', $oTask::CONSOLE_ARGUMENTS) . '</info>');
+                if ($this->isCommand($oTask::CONSOLE_COMMAND)) {
+                    $oOutput->writeln('Executes:    <info>' . $oTask::CONSOLE_COMMAND . ' ' . implode(' ', $oTask::CONSOLE_ARGUMENTS) . '</info>');
+                } else {
+                    $oOutput->writeln('<error>Command is misconfigured; ' . $oTask::CONSOLE_COMMAND . ' is not a valid console command</error>');
+                }
             } elseif (method_exists($oTask, 'execute')) {
                 $oOutput->writeln('Executes:    <info>' . get_class($oTask) . '->execute()</info>');
             } else {
