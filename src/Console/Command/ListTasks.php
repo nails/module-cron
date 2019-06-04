@@ -12,7 +12,9 @@
 namespace Nails\Cron\Console\Command;
 
 use Nails\Common\Exception\FactoryException;
+use Nails\Components;
 use Nails\Console\Command\Base;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -30,7 +32,8 @@ class ListTasks extends Base
     {
         $this
             ->setName('cron:list')
-            ->setDescription('Lists discovered cron tasks');
+            ->setDescription('Lists discovered cron tasks')
+            ->addArgument('component', InputArgument::OPTIONAL, 'Filter by component');;
     }
 
     // --------------------------------------------------------------------------
@@ -52,13 +55,22 @@ class ListTasks extends Base
 
         /** @var \Nails\Cron\Task\Base[] $aTasks */
         $aTasks = [];
+        /** @var string $sFilter */
+        $sFilter = $this->oInput->getArgument('component');
         Run::discoverTasks($oOutput, $aTasks);
 
         foreach ($aTasks as $oTask) {
 
+            $oComponent = Components::detectClassComponent($oTask);
+            $sPattern   = '/' . str_replace('/', '\/', $sFilter) . '/';
+            if (!empty($sFilter) && (empty($oComponent) || !preg_match($sPattern, $oComponent->slug))) {
+                continue;
+            }
+
             $oOutput->writeln('');
             $oOutput->writeln('Task:        <info>' . get_class($oTask) . '</info>');
             $oOutput->writeln('Description: <info>' . $oTask::DESCRIPTION . '</info>');
+            $oOutput->writeln('Component:   <info>' . Components::detectClassComponent($oTask)->name . '</info>');
             $oOutput->writeln('Expression:  <info>' . $oTask::CRON_EXPRESSION . '</info>');
 
             if ($oTask::CONSOLE_COMMAND) {
