@@ -69,7 +69,7 @@ class ListTasks extends Base
 
             $oOutput->writeln('');
             $oOutput->writeln('Task:        <info>' . get_class($oTask) . '</info>');
-            $oOutput->writeln('Description: <info>' . $oTask::DESCRIPTION . '</info>');
+            $oOutput->writeln('Description: <info>' . $oTask::getDescription($this) . '</info>');
             $oOutput->writeln('Component:   <info>' . Components::detectClassComponent($oTask)->name . '</info>');
             $oOutput->writeln('Expression:  <info>' . $oTask::CRON_EXPRESSION . '</info>');
 

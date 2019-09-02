@@ -11,6 +11,8 @@
 
 namespace Nails\Cron\Task;
 
+use Nails\Cron\Console\Command\ListTasks;
+
 /**
  * Class Base
  *
@@ -59,4 +61,28 @@ abstract class Base
      * @var string[]
      */
     const ENVIRONMENT = [];
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns the task's description, delagating to the console command if necessary if blank
+     *
+     * @param ListTasks $oCommand The console process
+     *
+     * @return string
+     */
+    public static function getDescription(ListTasks $oConsole): string
+    {
+        $sDescription = static::DESCRIPTION;
+
+        if (empty($sDescription) && !empty(static::CONSOLE_COMMAND)) {
+            try {
+                $oCommand     = $oConsole->getApplication()->find(static::CONSOLE_COMMAND);
+                $sDescription = $oCommand->getDescription();
+            } catch (\Exception $e) {
+            }
+        }
+
+        return $sDescription;
+    }
 }
