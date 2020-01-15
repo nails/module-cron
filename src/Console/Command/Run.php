@@ -143,32 +143,12 @@ class Run extends Base
         /** @var Component $oComponent */
         foreach (Components::available() as $oComponent) {
 
-            $aNamespaceRoots = $oComponent->getNamespaceRootPaths();
-            if (empty($aNamespaceRoots)) {
-                continue;
-            }
+            $aClasses = $oComponent
+                ->findClasses('Cron\\Task')
+                ->whichExtend(\Nails\Cron\Task\Base::class);
 
-            foreach ($aNamespaceRoots as $sPath) {
-
-                $sTaskPath = $sPath . DIRECTORY_SEPARATOR . 'Cron' . DIRECTORY_SEPARATOR . 'Task' . DIRECTORY_SEPARATOR;
-
-                if (is_dir($sTaskPath)) {
-
-                    $oDirectory = new RecursiveDirectoryIterator($sTaskPath);
-                    $oIterator  = new RecursiveIteratorIterator($oDirectory);
-                    $oRegex     = new RegexIterator($oIterator, '/^.+\.php$/i', RecursiveRegexIterator::GET_MATCH);
-
-                    foreach ($oRegex as $aItem) {
-
-                        $sThisTaskPath = reset($aItem);
-                        $sClassName    = str_replace($sTaskPath, '', $sThisTaskPath);
-                        $sClassName    = $oComponent->namespace . 'Cron\\Task\\' . preg_replace('/\.php$/', '', str_replace(DIRECTORY_SEPARATOR, '\\', $sClassName));
-
-                        if (class_exists($sClassName) && classExtends($sClassName, \Nails\Cron\Task\Base::class)) {
-                            $aTasks[] = new $sClassName();
-                        }
-                    }
-                }
+            foreach ($aClasses as $sClass) {
+                $aTasks[] = new $sClass();
             }
         }
 
