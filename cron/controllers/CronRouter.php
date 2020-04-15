@@ -67,8 +67,8 @@ class CronRouter extends BaseMiddle
 
         //  Configure logging
         $oDateTime     = Factory::factory('DateTime');
-        $this->oLogger = Factory::service('Logger');
         $this->oLogger->setFile('cron-' . $oDateTime->format('y-m-d') . '.php');
+        $this->oLogger = Factory::factory('Logger');
     }
 
     // --------------------------------------------------------------------------

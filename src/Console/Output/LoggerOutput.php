@@ -3,7 +3,7 @@
 namespace Nails\Cron\Console\Output;
 
 use DateTime;
-use Nails\Common\Service\Logger;
+use Nails\Common\Factory\Logger;
 use Nails\Factory;
 use Symfony\Component\Console\Formatter\OutputFormatterInterface;
 use Symfony\Component\Console\Output\StreamOutput;
@@ -34,7 +34,7 @@ class LoggerOutput extends StreamOutput
         /** @var DateTime $oNow */
         $oNow = Factory::factory('DateTime');
         /** @var Logger $oLogger */
-        $oLogger = Factory::service('Logger');
+        $oLogger = Factory::factory('Logger');
 
         //  Set a cron log file for today and write to it to ensure it exists
         $oLogger->setFile('cron-' . $oNow->format('Y-m-d') . '.php');
