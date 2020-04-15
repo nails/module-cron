@@ -11,6 +11,8 @@
  */
 
 use Nails\Components;
+use Nails\Common\Factory\Logger;
+use Nails\Common\Service\Input;
 use Nails\Environment;
 use Nails\Factory;
 
@@ -33,10 +35,19 @@ if (class_exists('\App\Cron\Controller\BaseRouter')) {
 
 class CronRouter extends BaseMiddle
 {
+    /** @var string */
     private $sModuleName;
+
+    /** @var string */
     private $sClassName;
+
+    /** @var string */
     private $sMethod;
+
+    /** @var array */
     private $aParams;
+
+    /** @var Logger */
     private $oLogger;
 
     // --------------------------------------------------------------------------
@@ -81,6 +92,7 @@ class CronRouter extends BaseMiddle
     public function index()
     {
         //  Command line only
+        /** @var Input $oInput */
         $oInput = Factory::service('Input');
         if (Environment::is(Environment::ENV_PROD) && !$oInput::isCli()) {
             header($oInput->server('SERVER_PROTOCOL') . ' 401 Unauthorized');
