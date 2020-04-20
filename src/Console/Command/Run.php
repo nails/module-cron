@@ -119,8 +119,7 @@ class Run extends Base
         $this->banner('Finished processing all cron tasks');
 
         if (!$oInput->getOption('output')) {
-            $oLogger = Factory::service('Logger');
-            $oLogger->line('Finished Cron Runner');
+            $oOutput->writeln('Finished Cron Runner');
         }
 
         return self::EXIT_CODE_SUCCESS;
