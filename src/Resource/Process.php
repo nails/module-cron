@@ -20,4 +20,12 @@ use Nails\Common\Resource;
  */
 class Process extends Resource
 {
+    /** @var int */
+    public $id;
+
+    /** @var string */
+    public $class;
+
+    /** @var Resource\DateTime */
+    public $started;
 }

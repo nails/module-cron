@@ -23,19 +23,17 @@ use Nails\Common\Service\Database;
 use Nails\Common\Service\ErrorHandler;
 use Nails\Common\Service\Event;
 use Nails\Components;
+use Nails\Config;
 use Nails\Console\Command\Base;
 use Nails\Cron\Console\Output\LoggerOutput;
 use Nails\Cron\Events;
 use Nails\Cron\Exception\CronException;
+use Nails\Cron\Exception\Task\ProcessStalledException;
 use Nails\Cron\Exception\Task\TaskMisconfiguredException;
 use Nails\Cron\Model\Process;
 use Nails\Environment;
 use Nails\Factory;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use RecursiveRegexIterator;
 use ReflectionException;
-use RegexIterator;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -106,15 +104,17 @@ class Run extends Base
         /** @var Event oEventService */
         $this->oEventService = Factory::service('Event');
 
-        $this->oEventService->trigger(Events::CRON_START, Events::getEventNamespace());
+        $this->triggerEvent(Events::CRON_START);
 
         static::discoverTasks($oOutput, $this->aTasks);
 
-        $this->oEventService->trigger(Events::CRON_READY, Events::getEventNamespace(), [$this->aTasks]);
+        $this->triggerEvent(Events::CRON_READY, [$this->aTasks]);
 
-        $this->runTasks();
+        $this
+            ->runTasks()
+            ->flushStalledProcesses();
 
-        $this->oEventService->trigger(Events::CRON_FINISH, Events::getEventNamespace());
+        $this->triggerEvent(Events::CRON_FINISH);
 
         $this->banner('Finished processing all cron tasks');
 
@@ -137,7 +137,7 @@ class Run extends Base
      */
     public static function discoverTasks(OutputInterface $oOutput, array &$aTasks): void
     {
-        $oOutput->write('Discovering tasks... ');
+        $oOutput->writeln('Discovering tasks... ');
 
         /** @var Component $oComponent */
         foreach (Components::available() as $oComponent) {
@@ -153,7 +153,7 @@ class Run extends Base
 
         $iCount = count($aTasks);
         Factory::helper('inflector');
-        $oOutput->writeln('found <info>' . $iCount . '</info> ' . pluralise($iCount, 'task'));
+        $oOutput->writeln('↳ found <info>' . $iCount . '</info> ' . pluralise($iCount, 'task'));
     }
 
     // --------------------------------------------------------------------------
@@ -169,66 +169,29 @@ class Run extends Base
      */
     protected function runTasks(): Run
     {
-        /** @var DateTime $oNow */
-        $oNow = Factory::factory('DateTime');
         /** @var Database $oDb */
         $oDb = Factory::service('Database');
-        /** @var Process $oProcessModel */
-        $oProcessModel = Factory::model('Process', 'nails/module-cron');
-
-        //  Sort the processes for easy counting
-        /** @var \Nails\Cron\Resource\Process $aProcesses */
-        $aProcesses = $oProcessModel->getAll();
-        /** @var int[] $aActiveProcesses */
-        $aActiveProcesses = [];
-
-        /** @var \Nails\Cron\Resource\Process $oProcess */
-        foreach ($aProcesses as $oProcess) {
-            if (!array_key_exists($oProcess->class, $aActiveProcesses)) {
-                $aActiveProcesses[$oProcess->class] = 0;
-            }
-            $aActiveProcesses[$oProcess->class]++;
-        }
 
         /** @var \Nails\Cron\Task\Base $oTask */
         foreach ($this->aTasks as $oTask) {
 
             try {
 
-                $this->oEventService->trigger(Events::CRON_TASK_BEFORE, Events::getEventNamespace(), [$oTask]);
+                $this->triggerEvent(Events::CRON_TASK_BEFORE, [$oTask]);
 
                 $sClass = get_class($oTask);
-                $this->oOutput->write('<info>' . $sClass . '</info>... ');
+                $this->oOutput->writeln('<info>' . $sClass . '</info>... ');
 
-                //  Ensure that there is space for the process to run
-                if (getFromArray($sClass, $aActiveProcesses, 0) >= $oTask::MAX_PROCESSES) {
-                    $this->oOutput->writeln('reached maximum allowed number of process for this task');
-                    continue;
-                } elseif (empty($oTask::CRON_EXPRESSION)) {
-                    $this->oOutput->writeln('');
-                    throw new TaskMisconfiguredException(
-                        'Cron task "' . $sClass . '" misconfigured; static::CRON_EXPRESSION is empty'
-                    );
-                }
-
-                $oExpression = CronExpression::factory($oTask::CRON_EXPRESSION);
-                if (!$oExpression->isDue($oNow)) {
-                    $this->oOutput->writeln('not due to run');
-                    continue;
-                } elseif (!empty($oTask::ENVIRONMENT) && !in_array(Environment::get(), $oTask::ENVIRONMENT)) {
-                    $this->oOutput->writeln('due to run, but not on ' . Environment::get());
+                if (!$this->taskCanRun($oTask) || !$this->taskDueToRun($oTask)) {
                     continue;
                 }
 
-                $this->oOutput->writeln('');
-                $iTimerStart = microtime(true) * 10000;
-
-                $iProcessId = $oProcessModel->create([
-                    'class' => $sClass,
-                ]);
+                $iTimerStart = $this->startTimer();
+                $oProcess    = $this->spawnProcess($oTask);
 
                 if (!empty($oTask::CONSOLE_COMMAND)) {
 
+                    /** @var DateTime $oNow */
                     $oNow = Factory::factory('DateTime');
                     $this->oOutput->writeln(
                         '↳ started at: <info>' . $oNow->format('Y-m-d H:i:s') . '</info>'
@@ -269,47 +232,315 @@ class Run extends Base
                     '↳ <error>Error: ' . $e->getMessage() . '</error>'
                 );
 
-                /** @var ErrorHandler $oErrorHandlerService */
-                $oErrorHandlerService = Factory::service('ErrorHandler');
-                /** @var ErrorHandlerDriver $sDriver */
-                $sDriver = $oErrorHandlerService::getDriverClass();
-                $sDriver::exception($e, false);
-
-                $this->oEventService->trigger(
-                    Events::CRON_TASK_ERROR,
-                    Events::getEventNamespace(),
-                    [$oTask, $e]
-                );
+                $this
+                    ->logException($e)
+                    ->triggerEvent(Events::CRON_TASK_ERROR, [$oTask, $e]);
 
             } finally {
 
-                if (!empty($iProcessId)) {
-                    $oProcessModel->delete($iProcessId);
-                }
-
-                if (!empty($iTimerStart)) {
-                    $iTimerEnd = microtime(true) * 10000;
-                    $iDuration = ($iTimerEnd - $iTimerStart) / 10000;
-                    //  Reset the start timer
-                    $iTimerStart = null;
-
-                    $oNow = Factory::factory('DateTime');
-                    $this->oOutput->writeln(
-                        '↳ finished at: <info>' . $oNow->format('Y-m-d H:i:s') . '</info>'
-                    );
-                    $this->oOutput->writeln(
-                        '↳ Job completed in <info>' . $iDuration . '</info> seconds'
-                    );
-                    $this->oOutput->writeln(
-                        '↳ Memory usage: ' . formatBytes(memory_get_usage())
-                    );
-                }
-
                 $oDb->flushCache();
 
-                $this->oEventService->trigger(Events::CRON_TASK_AFTER, Events::getEventNamespace(), [$oTask]);
+                $this
+                    ->killProcess($oProcess ?? null)
+                    ->finishTimer($iTimerStart ?? null)
+                    ->triggerEvent(Events::CRON_TASK_AFTER, [$oTask]);
             }
         }
+
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns the active processes with a counter showing the number of instances it has
+     *
+     * @return int[]
+     * @throws FactoryException
+     * @throws ModelException
+     */
+    protected function getActiveProcesses(): array
+    {
+        /** @var Process $oProcessModel */
+        $oProcessModel = Factory::model('Process', 'nails/module-cron');
+
+        /** @var \Nails\Cron\Resource\Process $aProcesses */
+        $aProcesses = $oProcessModel->getAll();
+        /** @var int[] $aActiveProcesses */
+        $aActiveProcesses = [];
+
+        /** @var \Nails\Cron\Resource\Process $oProcess */
+        foreach ($aProcesses as $oProcess) {
+            if (!array_key_exists($oProcess->class, $aActiveProcesses)) {
+                $aActiveProcesses[$oProcess->class] = 0;
+            }
+            $aActiveProcesses[$oProcess->class]++;
+        }
+
+        return $aActiveProcesses;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Determines whether a task can run
+     *
+     * @param \Nails\Cron\Task\Base $oTask The task being executed
+     *
+     * @return bool
+     * @throws TaskMisconfiguredException
+     */
+    protected function taskCanRun(
+        \Nails\Cron\Task\Base $oTask
+    ): bool {
+
+        $sClass           = get_class($oTask);
+        $aActiveProcesses = $this->getActiveProcesses();
+
+        if (getFromArray($sClass, $aActiveProcesses, 0) >= $oTask::MAX_PROCESSES) {
+            $this->oOutput->writeln('reached maximum allowed number of process for this task');
+            return false;
+
+        } elseif (empty($oTask::CRON_EXPRESSION)) {
+            $this->oOutput->writeln('');
+            throw new TaskMisconfiguredException(
+                'Cron task "' . $sClass . '" misconfigured; static::CRON_EXPRESSION is empty'
+            );
+        }
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Determines whether a task is due to run
+     *
+     * @param \Nails\Cron\Task\Base $oTask The task being executed
+     *
+     * @return bool
+     * @throws FactoryException
+     */
+    protected function taskDueToRun(\Nails\Cron\Task\Base $oTask): bool
+    {
+        /** @var DateTime $oNow */
+        $oNow        = Factory::factory('DateTime');
+        $oExpression = CronExpression::factory($oTask::CRON_EXPRESSION);
+
+        if (!$oExpression->isDue($oNow)) {
+            $this->oOutput->writeln('↳ not due to run');
+            return false;
+
+        } elseif (!empty($oTask::ENVIRONMENT) && !in_array(Environment::get(), $oTask::ENVIRONMENT)) {
+            $this->oOutput->writeln('↳ due to run, but not on ' . Environment::get());
+            return false;
+        }
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Starts a timer
+     *
+     * @return float
+     */
+    protected function startTimer(): float
+    {
+        return microtime(true) * 10000;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Finished a timer
+     *
+     * @param float|null $iTimerStart The timer's start time
+     *
+     * @return $this
+     * @throws FactoryException
+     */
+    protected function finishTimer(?float $iTimerStart): Run
+    {
+        if (!empty($iTimerStart)) {
+
+            $iTimerEnd = microtime(true) * 10000;
+            $iDuration = ($iTimerEnd - $iTimerStart) / 10000;
+            //  Reset the start timer
+            $iTimerStart = null;
+
+            /** @var DateTime $oNow */
+            $oNow = Factory::factory('DateTime');
+            $this->oOutput->writeln(
+                '↳ finished at: <info>' . $oNow->format('Y-m-d H:i:s') . '</info>'
+            );
+            $this->oOutput->writeln(
+                '↳ Job completed in <info>' . $iDuration . '</info> seconds'
+            );
+            $this->oOutput->writeln(
+                '↳ Memory usage: ' . formatBytes(memory_get_usage())
+            );
+        }
+
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Spawns a new cron process for the task
+     *
+     * @param \Nails\Cron\Task\Base $oTask The task being execute
+     *
+     * @return \Nails\Cron\Resource\Process
+     * @throws FactoryException
+     * @throws ModelException
+     */
+    protected function spawnProcess(\Nails\Cron\Task\Base $oTask): \Nails\Cron\Resource\Process
+    {
+        /** @var Process $oProcessModel */
+        $oProcessModel = Factory::model('Process', 'nails/module-cron');
+        $sClass        = get_class($oTask);
+
+        $oProcess = $oProcessModel->create([
+            'class' => $sClass,
+        ], true);
+
+        return $oProcess;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Kills a cron process
+     *
+     * @param \Nails\Cron\Resource\Process|null $oProcess The process to kill
+     *
+     * @return $this
+     */
+    protected function killProcess(?\Nails\Cron\Resource\Process $oProcess): Run
+    {
+        /** @var Process $oProcessModel */
+        $oProcessModel = Factory::model('Process', 'nails/module-cron');
+
+        if (!empty($oProcess)) {
+            $oProcessModel->delete($oProcess->id);
+        }
+
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Triggers an event in the cron namespace
+     *
+     * @param string $sEvent   The event being triggered
+     * @param array  $aPayload The payload to include
+     *
+     * @return $this
+     * @throws NailsException
+     * @throws ReflectionException
+     */
+    protected function triggerEvent(string $sEvent, array $aPayload = []): Run
+    {
+        $this->oEventService
+            ->trigger(
+                $sEvent,
+                Events::getEventNamespace(),
+                $aPayload
+            );
+
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Flushes any stalled processes
+     *
+     * @return $this
+     * @throws FactoryException
+     * @throws ModelException
+     */
+    protected function flushStalledProcesses(): Run
+    {
+        $this->banner('Flushing stalled processes...');
+
+        $aProcesses = $this->getStalledTasks();
+
+        if (empty($aProcesses)) {
+            $this->oOutput->writeln('No processes stalled');
+        }
+
+        foreach ($aProcesses as $oProcess) {
+
+            $this->oOutput->writeln(sprintf(
+                'Process #%s <info>%s</info> is stalled; killing... ',
+                $oProcess->id,
+                $oProcess->class,
+            ));
+
+            $this
+                ->killProcess($oProcess)
+                ->logException(new ProcessStalledException(
+                    sprintf(
+                        'Process #%s (%s) stalled; started at %s; removed at %s',
+                        $oProcess->id,
+                        $oProcess->class,
+                        $oProcess->started,
+                        Factory::factory('DateTime')->format('Y-m-d H:i:s')
+                    )
+                ));
+
+            $this->oOutput->writeln('↳ <info>done</info>');
+        }
+
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns processes which are considered stalled
+     *
+     * @return \Nails\Cron\Resource\Process[]
+     * @throws FactoryException
+     * @throws ModelException
+     */
+    protected function getStalledTasks(): array
+    {
+        /** @var Process $oProcessModel */
+        $oProcessModel = Factory::model('Process', 'nails/module-cron');
+
+        $iTimeout = Config::get('CRON_STALLED_PROCESS_TIMEOUT', 6);
+
+        return $oProcessModel->getAll([
+            'where' => [
+                ['started <', 'DATE_SUB(NOW(), INTERVAL ' . $iTimeout . ' HOUR)', false],
+            ],
+        ]);
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Logs an exception to the Error Handler without actually throwing it
+     *
+     * @param Exception $e The exception to log
+     *
+     * @return $this
+     * @throws FactoryException
+     */
+    protected function logException(\Exception $e): Run
+    {
+        /** @var ErrorHandler $oErrorHandlerService */
+        $oErrorHandlerService = Factory::service('ErrorHandler');
+
+        /** @var ErrorHandlerDriver $sDriver */
+        $sDriver = $oErrorHandlerService::getDriverClass();
+        $sDriver::exception($e, false);
 
         return $this;
     }
