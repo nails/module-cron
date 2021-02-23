@@ -12,7 +12,13 @@
 namespace Nails\Cron;
 
 use Nails\Common\Events\Base;
+use Nails\Cron\Event\Listener;
 
+/**
+ * Class Events
+ *
+ * @package Nails\Cron
+ */
 class Events extends Base
 {
     /**
@@ -53,4 +59,16 @@ class Events extends Base
      * Fired when cron finishes
      */
     const CRON_FINISH = 'CRON:FINISH';
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Autoload cron event listeners
+     */
+    public function autoload()
+    {
+        return [
+            new Listener\Start(),
+        ];
+    }
 }
