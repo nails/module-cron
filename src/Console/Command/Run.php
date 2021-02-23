@@ -25,6 +25,7 @@ use Nails\Common\Service\Event;
 use Nails\Components;
 use Nails\Config;
 use Nails\Console\Command\Base;
+use Nails\Cron\Constants;
 use Nails\Cron\Console\Output\LoggerOutput;
 use Nails\Cron\Events;
 use Nails\Cron\Exception\CronException;
@@ -262,7 +263,7 @@ class Run extends Base
     protected function getActiveProcesses(): array
     {
         /** @var Process $oProcessModel */
-        $oProcessModel = Factory::model('Process', 'nails/module-cron');
+        $oProcessModel = Factory::model('Process', Constants::MODULE_SLUG);
 
         /** @var \Nails\Cron\Resource\Process $aProcesses */
         $aProcesses = $oProcessModel->getAll();
@@ -400,7 +401,7 @@ class Run extends Base
     protected function spawnProcess(\Nails\Cron\Task\Base $oTask): \Nails\Cron\Resource\Process
     {
         /** @var Process $oProcessModel */
-        $oProcessModel = Factory::model('Process', 'nails/module-cron');
+        $oProcessModel = Factory::model('Process', Constants::MODULE_SLUG);
         $sClass        = get_class($oTask);
 
         $oProcess = $oProcessModel->create([
@@ -422,7 +423,7 @@ class Run extends Base
     protected function killProcess(?\Nails\Cron\Resource\Process $oProcess): Run
     {
         /** @var Process $oProcessModel */
-        $oProcessModel = Factory::model('Process', 'nails/module-cron');
+        $oProcessModel = Factory::model('Process', Constants::MODULE_SLUG);
 
         if (!empty($oProcess)) {
             $oProcessModel->delete($oProcess->id);
@@ -512,7 +513,7 @@ class Run extends Base
     protected function getStalledTasks(): array
     {
         /** @var Process $oProcessModel */
-        $oProcessModel = Factory::model('Process', 'nails/module-cron');
+        $oProcessModel = Factory::model('Process', Constants::MODULE_SLUG);
 
         $iTimeout = Config::get('CRON_STALLED_PROCESS_TIMEOUT', 6);
 
