@@ -15,6 +15,7 @@ use Cron\CronExpression;
 use Nails\Common\Exception\FactoryException;
 use Nails\Components;
 use Nails\Console\Command\Base;
+use Nails\Cron\Exception\CronException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -71,31 +72,45 @@ class ListTasks extends Base
             $oOutput->writeln('');
             $oOutput->writeln('Task:        <info>' . get_class($oTask) . '</info>');
             $oOutput->writeln('Description: <info>' . $oTask::getDescription($this) . '</info>');
-            $oOutput->writeln('Component:   <info>' . Components::detectClassComponent($oTask)->name . '</info>');
+            $oOutput->writeln('Component:   <info>' . $oComponent->name . '</info>');
 
             if ($oTask::CRON_EXPRESSION) {
                 if (CronExpression::isValidExpression($oTask::CRON_EXPRESSION)) {
                     $oOutput->writeln('Expression:  <info>' . $oTask::CRON_EXPRESSION . '</info>');
                 } else {
-                    $oOutput->writeln('<error>Command is misconfigured; ' . $oTask::CRON_EXPRESSION . ' is not a valid cron expression</error>');
+                    throw new CronException(sprintf(
+                        'Command %s is misconfigured; %s is not a valid cron expression',
+                        get_class($oTask),
+                        $oTask::CRON_EXPRESSION
+                    ));
                 }
 
             } else {
-                $oOutput->writeln('<error>Command is misconfigured, missing CRON_EXPRESSION</error>');
+                throw new CronException(sprintf(
+                    'Command %s is misconfigured, missing CRON_EXPRESSION',
+                    get_class($oTask),
+                ));
             }
 
             if ($oTask::CONSOLE_COMMAND) {
                 if ($this->isCommand($oTask::CONSOLE_COMMAND)) {
                     $oOutput->writeln('Executes:    <info>' . $oTask::CONSOLE_COMMAND . ' ' . implode(' ', $oTask::CONSOLE_ARGUMENTS) . '</info>');
                 } else {
-                    $oOutput->writeln('<error>Command is misconfigured; ' . $oTask::CONSOLE_COMMAND . ' is not a valid console command</error>');
+                    throw new CronException(sprintf(
+                        'Command %s is misconfigured; %s is not a valid console command',
+                        get_class($oTask),
+                        $oTask::CONSOLE_COMMAND
+                    ));
                 }
 
             } elseif (method_exists($oTask, 'execute')) {
                 $oOutput->writeln('Executes:    <info>' . get_class($oTask) . '->execute()</info>');
 
             } else {
-                $oOutput->writeln('<error>Command is misconfigured, missing CONSOLE_COMMAND</error>');
+                throw new CronException(sprintf(
+                    'Command %s is misconfigured, missing CONSOLE_COMMAND',
+                    get_class($oTask),
+                ));
             }
         }
         $oOutput->writeln('');
