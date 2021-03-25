@@ -53,7 +53,7 @@ class ListTasks extends Base
     {
         parent::execute($oInput, $oOutput);
 
-        $this->banner('Nails Cron Tasks');
+        $this->banner('Cron: List Tasks');
 
         /** @var \Nails\Cron\Task\Base[] $aTasks */
         $aTasks = [];

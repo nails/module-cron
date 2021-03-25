@@ -100,7 +100,7 @@ class Run extends Base
 
         parent::execute($oInput, $oOutput);
 
-        $this->banner('Nails Cron Runner');
+        $this->banner('Cron: Run');
 
         /** @var Event oEventService */
         $this->oEventService = Factory::service('Event');
