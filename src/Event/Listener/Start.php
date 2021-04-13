@@ -30,7 +30,8 @@ class Start extends Subscription
      */
     public function __construct()
     {
-        $this->setEvent(Events::CRON_START)
+        $this
+            ->setEvent(Events::CRON_START)
             ->setNamespace(Events::getEventNamespace())
             ->setCallback([$this, 'execute']);
     }
