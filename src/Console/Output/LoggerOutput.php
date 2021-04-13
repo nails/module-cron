@@ -15,6 +15,10 @@ use Symfony\Component\Console\Output\StreamOutput;
  */
 class LoggerOutput extends StreamOutput
 {
+    protected string $sSessionId;
+
+    // --------------------------------------------------------------------------
+
     /**
      * LoggerOutput constructor.
      *
@@ -29,18 +33,22 @@ class LoggerOutput extends StreamOutput
         $stream = null,
         int $verbosity = self::VERBOSITY_NORMAL,
         bool $decorated = null,
-        OutputFormatterInterface $formatter = null
+        OutputFormatterInterface $formatter = null,
+        string $sSessionId = null
     ) {
         /** @var DateTime $oNow */
         $oNow = Factory::factory('DateTime');
         /** @var Logger $oLogger */
         $oLogger = Factory::factory('Logger');
 
+        $this->setSessionId($sSessionId ?? uniqid());
+
         //  Set a cron log file for today and write to it to ensure it exists
         $oLogger->setFile('cron-' . $oNow->format('Y-m-d') . '.php');
-        $oLogger->line('Starting Cron Runner');
 
         parent::__construct($oLogger->getStream(), $verbosity, $decorated, $formatter);
+
+        $this->doWrite('Starting Cron Runner', true);
     }
 
     // --------------------------------------------------------------------------
@@ -53,8 +61,34 @@ class LoggerOutput extends StreamOutput
      */
     protected function doWrite($message, $newline)
     {
-        $oNow    = Factory::factory('DateTime');
-        $message = 'INFO - ' . $oNow->format('Y-m-d H:i:s') . ' --> ' . $message;
+        /** @var DateTime $oNow */
+        $oNow = Factory::factory('DateTime');
+
+        $message = sprintf(
+            'INFO - %s [%s] --> %s',
+            $oNow->format('Y-m-d H:i:s'),
+            $this->getSessionId(),
+            $message
+        );
+
         parent::doWrite($message, $newline);
+    }
+
+    // --------------------------------------------------------------------------
+
+    public function setSessionId(string $sSessionId): self
+    {
+        $this->sSessionId = $sSessionId;
+        return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * @return mixed
+     */
+    public function getSessionId(): string
+    {
+        return $this->sSessionId;
     }
 }
