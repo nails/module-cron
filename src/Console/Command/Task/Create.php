@@ -105,14 +105,8 @@ class Create extends BaseMaker
 
         try {
 
-            $aToCreate    = [];
-            $aTasks = array_filter(
-                array_map(function ($sTask) {
-                    return implode('/', array_map('ucfirst', explode('/', ucfirst(trim($sTask)))));
-                }, explode(',', $aFields['CLASS_NAME']))
-            );
-
-            sort($aTasks);
+            $aToCreate = [];
+            $aTasks    = $this->parseClassNames($aFields['CLASS_NAME']);
 
             foreach ($aTasks as $sTask) {
 
