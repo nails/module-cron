@@ -12,13 +12,14 @@
 namespace Nails\Cron\Task;
 
 use Nails\Cron\Console\Command\ListTasks;
+use Nails\Cron\Interfaces;
 
 /**
  * Class Base
  *
  * @package Nails\Cron\Task
  */
-abstract class Base
+abstract class Base implements Interfaces\Task
 {
     /**
      * Description of the task
@@ -32,19 +33,19 @@ abstract class Base
      *
      * @var string
      */
-    const CRON_EXPRESSION = null;
+    const CRON_EXPRESSION = '';
 
     /**
      * The console command to execute
      *
-     * @var string
+     * @var string|null
      */
     const CONSOLE_COMMAND = null;
 
     /**
      * The arguments to pass to the console command
      *
-     * @var array
+     * @var string[]
      */
     const CONSOLE_ARGUMENTS = [];
 
@@ -67,11 +68,11 @@ abstract class Base
     /**
      * Returns the task's description, delagating to the console command if necessary if blank
      *
-     * @param ListTasks $oCommand The console process
+     * @param \Nails\Console\Command\Base $oConsole The console process
      *
      * @return string
      */
-    public static function getDescription(ListTasks $oConsole): string
+    public function getDescription(\Nails\Console\Command\Base $oConsole): string
     {
         $sDescription = static::DESCRIPTION;
 
@@ -84,5 +85,65 @@ abstract class Base
         }
 
         return $sDescription;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns the cron expression to use
+     *
+     * @return string
+     */
+    public function getCronExpression(): string
+    {
+        return static::CRON_EXPRESSION;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns the console command the task is bound to
+     *
+     * @return string|null
+     */
+    public function getConsoleCommand(): ?string
+    {
+        return static::CONSOLE_COMMAND;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns the console arguments
+     *
+     * @return string[]
+     */
+    public function getConsoleArguments(): array
+    {
+        return static::CONSOLE_ARGUMENTS;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns the maximum number of processes to spawn
+     *
+     * @return int
+     */
+    public function getMaxProcesses(): int
+    {
+        return static::MAX_PROCESSES;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Returns the environments in which the task should run
+     *
+     * @return string[]
+     */
+    public function getEnvironments(): array
+    {
+        return static::ENVIRONMENT;
     }
 }

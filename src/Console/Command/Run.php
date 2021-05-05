@@ -31,6 +31,7 @@ use Nails\Cron\Events;
 use Nails\Cron\Exception\CronException;
 use Nails\Cron\Exception\Task\ProcessStalledException;
 use Nails\Cron\Exception\Task\TaskMisconfiguredException;
+use Nails\Cron\Interfaces;
 use Nails\Cron\Model\Process;
 use Nails\Environment;
 use Nails\Factory;
@@ -49,7 +50,7 @@ class Run extends Base
     /**
      * Discovered tasks
      *
-     * @var array
+     * @var Interfaces\Task[]
      */
     private $aTasks = [];
 
@@ -145,7 +146,7 @@ class Run extends Base
 
             $aClasses = $oComponent
                 ->findClasses('Cron\\Task')
-                ->whichExtend(\Nails\Cron\Task\Base::class);
+                ->whichImplement(Interfaces\Task::class);
 
             foreach ($aClasses as $sClass) {
                 $aTasks[] = new $sClass();
@@ -173,7 +174,7 @@ class Run extends Base
         /** @var Database $oDb */
         $oDb = Factory::service('Database');
 
-        /** @var \Nails\Cron\Task\Base $oTask */
+        /** @var Interfaces\Task $oTask */
         foreach ($this->aTasks as $oTask) {
 
             try {
@@ -187,10 +188,12 @@ class Run extends Base
                     continue;
                 }
 
-                $iTimerStart = $this->startTimer();
-                $oProcess    = $this->spawnProcess($oTask);
+                $iTimerStart       = $this->startTimer();
+                $oProcess          = $this->spawnProcess($oTask);
+                $sConsoleCommand   = $oTask->getConsoleCommand();
+                $aConsoleArguments = $oTask->getConsoleArguments();
 
-                if (!empty($oTask::CONSOLE_COMMAND)) {
+                if (!empty($sConsoleCommand)) {
 
                     /** @var DateTime $oNow */
                     $oNow = Factory::factory('DateTime');
@@ -198,11 +201,11 @@ class Run extends Base
                         '↳ started at: <info>' . $oNow->format('Y-m-d H:i:s') . '</info>'
                     );
                     $this->oOutput->writeln(
-                        '↳ executing: <info>' . $oTask::CONSOLE_COMMAND . ' ' . implode(' ', $oTask::CONSOLE_ARGUMENTS) . '</info>'
+                        '↳ executing: <info>' . $sConsoleCommand . ' ' . implode(' ', $aConsoleArguments) . '</info>'
                     );
                     $iResult = $this->callCommand(
-                        $oTask::CONSOLE_COMMAND,
-                        $oTask::CONSOLE_ARGUMENTS,
+                        $sConsoleCommand,
+                        $aConsoleArguments,
                         false
                     );
 
@@ -222,9 +225,10 @@ class Run extends Base
                     );
 
                 } else {
-                    throw new TaskMisconfiguredException(
-                        'Cron task "' . $sClass . '" misconfigured; no task defined'
-                    );
+                    throw new TaskMisconfiguredException(sprintf(
+                        'Cron task "%s" is misconfigured, does not execute a console command or provide execute method',
+                        get_class($oTask),
+                    ));
                 }
 
             } catch (Exception $e) {
@@ -286,27 +290,28 @@ class Run extends Base
     /**
      * Determines whether a task can run
      *
-     * @param \Nails\Cron\Task\Base $oTask The task being executed
+     * @param Interfaces\Task $oTask The task being executed
      *
      * @return bool
      * @throws TaskMisconfiguredException
      */
     protected function taskCanRun(
-        \Nails\Cron\Task\Base $oTask
+        Interfaces\Task $oTask
     ): bool {
 
         $sClass           = get_class($oTask);
         $aActiveProcesses = $this->getActiveProcesses();
 
-        if (getFromArray($sClass, $aActiveProcesses, 0) >= $oTask::MAX_PROCESSES) {
-            $this->oOutput->writeln('reached maximum allowed number of process for this task');
+        if (getFromArray($sClass, $aActiveProcesses, 0) >= $oTask->getMaxProcesses()) {
+            $this->oOutput->writeln('Reached maximum allowed number of process for this task');
             return false;
 
-        } elseif (empty($oTask::CRON_EXPRESSION)) {
+        } elseif (empty($oTask->getCronExpression())) {
             $this->oOutput->writeln('');
-            throw new TaskMisconfiguredException(
-                'Cron task "' . $sClass . '" misconfigured; static::CRON_EXPRESSION is empty'
-            );
+            throw new TaskMisconfiguredException(sprintf(
+                'Cron task "%s" misconfigured; cron expression is empty',
+                get_class($oTask),
+            ));
         }
 
         return true;
@@ -317,22 +322,22 @@ class Run extends Base
     /**
      * Determines whether a task is due to run
      *
-     * @param \Nails\Cron\Task\Base $oTask The task being executed
+     * @param Interfaces\Task $oTask The task being executed
      *
      * @return bool
      * @throws FactoryException
      */
-    protected function taskDueToRun(\Nails\Cron\Task\Base $oTask): bool
+    protected function taskDueToRun(Interfaces\Task $oTask): bool
     {
         /** @var DateTime $oNow */
         $oNow        = Factory::factory('DateTime');
-        $oExpression = CronExpression::factory($oTask::CRON_EXPRESSION);
+        $oExpression = CronExpression::factory($oTask->getCronExpression());
 
         if (!$oExpression->isDue($oNow)) {
             $this->oOutput->writeln('↳ not due to run');
             return false;
 
-        } elseif (!empty($oTask::ENVIRONMENT) && !in_array(Environment::get(), $oTask::ENVIRONMENT)) {
+        } elseif (!empty($oTask->getEnvironments()) && !in_array(Environment::get(), $oTask->getEnvironments())) {
             $this->oOutput->writeln('↳ due to run, but not on ' . Environment::get());
             return false;
         }
@@ -392,13 +397,13 @@ class Run extends Base
     /**
      * Spawns a new cron process for the task
      *
-     * @param \Nails\Cron\Task\Base $oTask The task being execute
+     * @param Interfaces\Task $oTask The task being execute
      *
      * @return \Nails\Cron\Resource\Process
      * @throws FactoryException
      * @throws ModelException
      */
-    protected function spawnProcess(\Nails\Cron\Task\Base $oTask): \Nails\Cron\Resource\Process
+    protected function spawnProcess(Interfaces\Task $oTask): \Nails\Cron\Resource\Process
     {
         /** @var Process $oProcessModel */
         $oProcessModel = Factory::model('Process', Constants::MODULE_SLUG);

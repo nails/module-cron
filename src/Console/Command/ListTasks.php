@@ -16,6 +16,7 @@ use Nails\Common\Exception\FactoryException;
 use Nails\Components;
 use Nails\Console\Command\Base;
 use Nails\Cron\Exception\CronException;
+use Nails\Cron\Interfaces;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -55,7 +56,7 @@ class ListTasks extends Base
 
         $this->banner('Cron: List Tasks');
 
-        /** @var \Nails\Cron\Task\Base[] $aTasks */
+        /** @var Interfaces\Task[] $aTasks */
         $aTasks = [];
         /** @var string $sFilter */
         $sFilter = $this->oInput->getArgument('component');
@@ -71,35 +72,39 @@ class ListTasks extends Base
 
             $oOutput->writeln('');
             $oOutput->writeln('Task:        <info>' . get_class($oTask) . '</info>');
-            $oOutput->writeln('Description: <info>' . $oTask::getDescription($this) . '</info>');
+            $oOutput->writeln('Description: <info>' . $oTask->getDescription($this) . '</info>');
             $oOutput->writeln('Component:   <info>' . $oComponent->name . '</info>');
 
-            if ($oTask::CRON_EXPRESSION) {
-                if (CronExpression::isValidExpression($oTask::CRON_EXPRESSION)) {
-                    $oOutput->writeln('Expression:  <info>' . $oTask::CRON_EXPRESSION . '</info>');
+            $sCronExpression   = $oTask->getCronExpression();
+            $sConsoleCommand   = $oTask->getConsoleCommand();
+            $aConsoleArguments = $oTask->getConsoleArguments();
+
+            if ($sCronExpression) {
+                if (CronExpression::isValidExpression($sCronExpression)) {
+                    $oOutput->writeln('Expression:  <info>' . $sCronExpression . '</info>');
                 } else {
                     throw new CronException(sprintf(
-                        'Command %s is misconfigured; %s is not a valid cron expression',
+                        'Cron task "%s" is misconfigured; "%s" is not a valid cron expression',
                         get_class($oTask),
-                        $oTask::CRON_EXPRESSION
+                        $sCronExpression
                     ));
                 }
 
             } else {
                 throw new CronException(sprintf(
-                    'Command %s is misconfigured, missing CRON_EXPRESSION',
+                    'Cron task "%s" misconfigured; cron expression is empty',
                     get_class($oTask),
                 ));
             }
 
-            if ($oTask::CONSOLE_COMMAND) {
-                if ($this->isCommand($oTask::CONSOLE_COMMAND)) {
-                    $oOutput->writeln('Executes:    <info>' . $oTask::CONSOLE_COMMAND . ' ' . implode(' ', $oTask::CONSOLE_ARGUMENTS) . '</info>');
+            if ($sConsoleCommand) {
+                if ($this->isCommand($sConsoleCommand)) {
+                    $oOutput->writeln('Executes:    <info>' . $sConsoleCommand . ' ' . implode(' ', $aConsoleArguments) . '</info>');
                 } else {
                     throw new CronException(sprintf(
-                        'Command %s is misconfigured; %s is not a valid console command',
+                        'Cron task "%s" is misconfigured; %s is not a valid console command',
                         get_class($oTask),
-                        $oTask::CONSOLE_COMMAND
+                        $sConsoleCommand
                     ));
                 }
 
@@ -108,7 +113,7 @@ class ListTasks extends Base
 
             } else {
                 throw new CronException(sprintf(
-                    'Command %s is misconfigured, missing CONSOLE_COMMAND',
+                    'Cron task "%s" is misconfigured, does not execute a console command or provide execute method',
                     get_class($oTask),
                 ));
             }
