@@ -54,7 +54,7 @@ abstract class Base implements Interfaces\Task
      *
      * @var int
      */
-    const MAX_PROCESSES = INF;
+    const MAX_PROCESSES = PHP_INT_MAX;
 
     /**
      * Which environments to run the task on, leave empty to run on every environment
