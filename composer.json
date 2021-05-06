@@ -31,9 +31,12 @@
         "nails/module-console": "dev-develop",
         "dragonmantank/cron-expression": "^3.0"
     },
-    "require-dev":
-    {
-        "phpunit/phpunit": "9.*"
+    "require-dev": {
+        "phpunit/phpunit": "9.*",
+        "phpstan/phpstan": "0.*"
+    },
+    "scripts": {
+        "analyse": "./vendor/bin/phpstan analyse -c .phpstan/config.neon"
     },
     "autoload":
     {
