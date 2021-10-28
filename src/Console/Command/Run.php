@@ -188,8 +188,10 @@ class Run extends Base
                     continue;
                 }
 
+                $oProcess = $this->spawnProcess($oTask);
+                $this->oOutput->writeln('↳ Process ID is #' . $oProcess->id);
+
                 $iTimerStart       = $this->startTimer();
-                $oProcess          = $this->spawnProcess($oTask);
                 $sConsoleCommand   = $oTask->getConsoleCommand();
                 $aConsoleArguments = $oTask->getConsoleArguments();
 
