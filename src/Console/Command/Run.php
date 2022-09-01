@@ -213,7 +213,12 @@ class Run extends Base
 
                     if ($iResult !== static::EXIT_CODE_SUCCESS) {
                         throw new CronException(
-                            'Task failed with error code ' . $iResult
+                            sprintf(
+                                'Task `%s %s` failed with error code %s',
+                                $sConsoleCommand,
+                                implode(' ', $aConsoleArguments),
+                                $iResult
+                            )
                         );
                     }
 
