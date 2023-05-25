@@ -57,9 +57,8 @@ class ListTasks extends Base
         $this->banner('Cron: List Tasks');
 
         /** @var Interfaces\Task[] $aTasks */
-        $aTasks = [];
-        /** @var string $sFilter */
-        $sFilter = $this->oInput->getArgument('component');
+        $aTasks  = [];
+        $sFilter = (string) $this->oInput->getArgument('component');
         Run::discoverTasks($oOutput, $aTasks);
 
         foreach ($aTasks as $oTask) {
