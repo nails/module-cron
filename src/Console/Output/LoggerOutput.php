@@ -33,7 +33,7 @@ class LoggerOutput extends StreamOutput
         $stream = null,
         int $verbosity = self::VERBOSITY_NORMAL,
         bool $decorated = null,
-        OutputFormatterInterface $formatter = null,
+        ?OutputFormatterInterface $formatter = null,
         string $sSessionId = null
     ) {
         /** @var DateTime $oNow */
