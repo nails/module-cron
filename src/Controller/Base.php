@@ -12,32 +12,7 @@
 
 namespace Nails\Cron\Controller;
 
-use Nails\Common\Exception\FactoryException;
-use Nails\Common\Exception\NailsException;
-use ReflectionException;
-
-// --------------------------------------------------------------------------
-
-/**
- * Allow the app to add functionality, if needed
- * Negative conditional helps with static analysis
- */
-if (!class_exists('\App\Cron\Controller\Base')) {
-    abstract class BaseMiddle
-    {
-        public function __construct()
-        {
-        }
-    }
-} else {
-    abstract class BaseMiddle extends \App\Cron\Controller\Base
-    {
-    }
-}
-
-// --------------------------------------------------------------------------
-
-abstract class Base extends BaseMiddle
+abstract class Base
 {
     protected $oCronRouter;
 
@@ -47,18 +22,12 @@ abstract class Base extends BaseMiddle
      * Base constructor.
      *
      * @param $oCronRouter
-     *
-     * @throws FactoryException
-     * @throws NailsException
-     * @throws ReflectionException
      */
     public function __construct($oCronRouter)
     {
-        parent::__construct();
-
         $this->oCronRouter = $oCronRouter;
 
-        //  By default cron jobs should be long lasting
+        //  By default, cron jobs should be long-lasting
         if (function_exists('set_time_limit')) {
             set_time_limit(0);
         }
@@ -71,7 +40,7 @@ abstract class Base extends BaseMiddle
      *
      * @param string $sLine the line to write
      */
-    protected function writeLog($sLine)
+    protected function writeLog(string $sLine)
     {
         $this->oCronRouter->writeLog($sLine);
     }
