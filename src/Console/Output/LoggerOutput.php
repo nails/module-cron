@@ -32,9 +32,9 @@ class LoggerOutput extends StreamOutput
     public function __construct(
         $stream = null,
         int $verbosity = self::VERBOSITY_NORMAL,
-        bool $decorated = null,
+        ?bool $decorated = null,
         ?OutputFormatterInterface $formatter = null,
-        string $sSessionId = null
+        ?string $sSessionId = null
     ) {
         /** @var DateTime $oNow */
         $oNow = Factory::factory('DateTime');
