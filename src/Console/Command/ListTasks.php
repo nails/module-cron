@@ -118,8 +118,9 @@ class ListTasks extends Base
             }
 
             if (!$oTask->isEnabled()) {
-                $oOutput->writeln('<info>This task has been disabled and will not execute.</info>');
+                $oOutput->writeln('<warning>This task has been disabled and will not execute</warning>');
             }
+
         }
         $oOutput->writeln('');
 
