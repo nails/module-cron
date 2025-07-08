@@ -63,6 +63,11 @@ abstract class Base implements Interfaces\Task
      */
     const ENVIRONMENT = [];
 
+    /**
+     * Whether the task should run or not, regardless of environment
+     */
+    const ENABLED = true;
+
     // --------------------------------------------------------------------------
 
     /**
@@ -145,5 +150,17 @@ abstract class Base implements Interfaces\Task
     public function getEnvironments(): array
     {
         return static::ENVIRONMENT;
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Whether the task should run or not, regardless of environment
+     *
+     * @return bool
+     */
+    public function isEnabled(): bool
+    {
+        return static::ENABLED;
     }
 }

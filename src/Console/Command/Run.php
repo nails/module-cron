@@ -344,6 +344,10 @@ class Run extends Base
             $this->oOutput->writeln('↳ not due to run');
             return false;
 
+        } elseif (!$oTask->isEnabled()) {
+            $this->oOutput->writeln('↳ due to run, but task has been disabled');
+            return false;
+
         } elseif (!empty($oTask->getEnvironments()) && !in_array(Environment::get(), $oTask->getEnvironments())) {
             $this->oOutput->writeln('↳ due to run, but not on ' . Environment::get());
             return false;

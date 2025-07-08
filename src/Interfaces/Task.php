@@ -59,4 +59,13 @@ interface Task
      * @return string[]
      */
     public function getEnvironments(): array;
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Whether the task should run or not, regardless of environment
+     *
+     * @return bool
+     */
+    public function isEnabled(): bool;
 }
