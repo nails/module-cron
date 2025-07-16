@@ -11,11 +11,11 @@ return [
         },
     ],
     'resources' => [
-        'Process' => function ($oObj) {
+        'Process' => function ($resource, $model) {
             if (class_exists('\App\Cron\Resource\Process')) {
-                return new \App\Cron\Resource\Process($oObj);
+                return new \App\Cron\Resource\Process($resource, $model);
             } else {
-                return new \Nails\Cron\Resource\Process($oObj);
+                return new \Nails\Cron\Resource\Process($resource, $model);
             }
         },
     ],

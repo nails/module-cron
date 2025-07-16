@@ -11,18 +11,15 @@
 
 namespace Nails\Cron\Resource;
 
-use Nails\Common\Resource;
+use Nails\Common\Resource\Entity;
 
 /**
  * Class Process
  *
  * @package Nails\Cron\Resource
  */
-class Process extends Resource
+class Process extends Entity
 {
-    /** @var int */
-    public $id;
-
     /** @var string */
     public $class;
 
