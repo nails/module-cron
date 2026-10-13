@@ -4,6 +4,7 @@ namespace Nails\Cron\Console\Output;
 
 use DateTime;
 use Nails\Common\Factory\Logger;
+use Nails\Common\Log\Plain;
 use Nails\Factory;
 use Symfony\Component\Console\Formatter\OutputFormatterInterface;
 use Symfony\Component\Console\Output\StreamOutput;
@@ -46,9 +47,7 @@ class LoggerOutput extends StreamOutput
         //  Set a cron log file for today and write to it to ensure it exists
         $oLogger->setFile('cron-' . $oNow->format('Y-m-d') . '.php');
 
-        parent::__construct($oLogger->getStream(), $verbosity, $decorated, $formatter);
-
-        $this->doWrite('Starting Cron Runner', true);
+        parent::__construct($oLogger->getStream(), $verbosity, $decorated ?? false, $formatter);
     }
 
     // --------------------------------------------------------------------------
@@ -61,17 +60,29 @@ class LoggerOutput extends StreamOutput
      */
     protected function doWrite($message, $newline)
     {
-        /** @var DateTime $oNow */
-        $oNow = Factory::factory('DateTime');
+        if (is_array($message)) {
+            $message = implode("\n", $message);
+        }
 
-        $message = sprintf(
-            'INFO - %s [%s] --> %s',
-            $oNow->format('Y-m-d H:i:s'),
-            $this->getSessionId(),
-            $message
-        );
+        foreach (preg_split("/\R/", (string) $message) ?: [] as $sLine) {
+            $sLine = Plain::line($sLine);
+            if ($sLine === '') {
+                continue;
+            }
 
-        parent::doWrite($message, $newline);
+            /** @var DateTime $oNow */
+            $oNow = Factory::factory('DateTime');
+
+            parent::doWrite(
+                sprintf(
+                    'INFO - %s [%s] --> %s',
+                    $oNow->format('Y-m-d H:i:s'),
+                    $this->getSessionId(),
+                    $sLine
+                ),
+                true
+            );
+        }
     }
 
     // --------------------------------------------------------------------------
