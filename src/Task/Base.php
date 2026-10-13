@@ -68,6 +68,22 @@ abstract class Base implements Interfaces\Task
      */
     const ENABLED = true;
 
+    /**
+     * Copy the console command's output into the cron log.
+     * Tasks that write their own log set this to false; a non-zero exit is still copied.
+     */
+    const LOG_OUTPUT = true;
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * Whether this task's console output is copied into the cron log.
+     */
+    public function logsOutput(): bool
+    {
+        return static::LOG_OUTPUT;
+    }
+
     // --------------------------------------------------------------------------
 
     /**
