@@ -26,8 +26,11 @@ use Nails\Components;
 use Nails\Config;
 use Nails\Console\Command\Base;
 use Nails\Cron\Constants;
+use Nails\Cron\Console\CapturedOutput;
+use Nails\Cron\Console\LogGate;
 use Nails\Cron\Console\Output\LoggerOutput;
 use Nails\Cron\Events;
+use Nails\Cron\Service\SkipNotice;
 use Nails\Cron\Exception\CronException;
 use Nails\Cron\Exception\Task\ProcessStalledException;
 use Nails\Cron\Exception\Task\TaskMisconfiguredException;
@@ -36,8 +39,11 @@ use Nails\Cron\Model\Process;
 use Nails\Environment;
 use Nails\Factory;
 use ReflectionException;
+use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\BufferedOutput;
+use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -60,6 +66,13 @@ class Run extends Base
      * @var Event
      */
     private $oEventService;
+
+    /**
+     * Process id currently holding each task class, from the last active-process read.
+     *
+     * @var array<string, int>
+     */
+    private array $aHoldingProcessIds = [];
 
     // --------------------------------------------------------------------------
 
@@ -108,7 +121,10 @@ class Run extends Base
 
         $this->triggerEvent(Events::CRON_START);
 
-        static::discoverTasks($oOutput, $this->aTasks);
+        static::discoverTasks(
+            $this->logsToFile() ? new NullOutput() : $oOutput,
+            $this->aTasks
+        );
 
         $this->triggerEvent(Events::CRON_READY, [$this->aTasks]);
 
@@ -119,10 +135,6 @@ class Run extends Base
         $this->triggerEvent(Events::CRON_FINISH);
 
         $this->banner('Finished processing all cron tasks');
-
-        if (!$oInput->getOption('output')) {
-            $oOutput->writeln('Finished Cron Runner');
-        }
 
         return self::EXIT_CODE_SUCCESS;
     }
@@ -182,11 +194,13 @@ class Run extends Base
                 $this->triggerEvent(Events::CRON_TASK_BEFORE, [$oTask]);
 
                 $sClass = get_class($oTask);
-                $this->oOutput->writeln('<info>' . $sClass . '</info>... ');
 
                 if (!$this->taskCanRun($oTask) || !$this->taskDueToRun($oTask)) {
+                    $this->writeIdle('<info>' . $sClass . '</info>... ');
                     continue;
                 }
+
+                $this->writeLog('<info>' . $sClass . '</info>... ');
 
                 $oProcess = $this->spawnProcess($oTask);
                 $this->oOutput->writeln('↳ Process ID is #' . $oProcess->id);
@@ -205,11 +219,33 @@ class Run extends Base
                     $this->oOutput->writeln(
                         '↳ executing: <info>' . $sConsoleCommand . ' ' . implode(' ', $aConsoleArguments) . '</info>'
                     );
-                    $iResult = $this->callCommand(
-                        $sConsoleCommand,
-                        $aConsoleArguments,
-                        false
-                    );
+                    $bLogOutput = $this->taskLogsOutput($oTask);
+                    if ($bLogOutput) {
+                        $iResult = $this->callCommand(
+                            $sConsoleCommand,
+                            $aConsoleArguments,
+                            false
+                        );
+                    } else {
+                        $oBuffer = new BufferedOutput($this->oOutput->getVerbosity(), false);
+                        $iResult = $this->callCommand(
+                            $sConsoleCommand,
+                            $aConsoleArguments,
+                            false,
+                            false,
+                            $oBuffer
+                        );
+                        $this->writeLog('↳ exit code: <info>' . $iResult . '</info>');
+                        $sBody = CapturedOutput::body($oBuffer->fetch(), false, $iResult);
+                        if ($sBody !== null) {
+                            foreach (preg_split("/\R/", $sBody) ?: [] as $sLine) {
+                                if (trim($sLine) === '') {
+                                    continue;
+                                }
+                                $this->writeLog($sLine);
+                            }
+                        }
+                    }
 
                     if ($iResult !== static::EXIT_CODE_SUCCESS) {
                         throw new CronException(
@@ -279,7 +315,8 @@ class Run extends Base
         /** @var \Nails\Cron\Resource\Process $aProcesses */
         $aProcesses = $oProcessModel->getAll();
         /** @var int[] $aActiveProcesses */
-        $aActiveProcesses = [];
+        $aActiveProcesses          = [];
+        $this->aHoldingProcessIds = [];
 
         /** @var \Nails\Cron\Resource\Process $oProcess */
         foreach ($aProcesses as $oProcess) {
@@ -287,6 +324,7 @@ class Run extends Base
                 $aActiveProcesses[$oProcess->class] = 0;
             }
             $aActiveProcesses[$oProcess->class]++;
+            $this->aHoldingProcessIds[$oProcess->class] = (int) $oProcess->id;
         }
 
         return $aActiveProcesses;
@@ -310,7 +348,10 @@ class Run extends Base
         $aActiveProcesses = $this->getActiveProcesses();
 
         if (getFromArray($sClass, $aActiveProcesses, 0) >= $oTask->getMaxProcesses()) {
-            $this->oOutput->writeln('Reached maximum allowed number of process for this task');
+            $iProcessId = $this->aHoldingProcessIds[$sClass] ?? 0;
+            foreach ($this->skipNotice()->observe($sClass, $iProcessId, $this->now()) as $sLine) {
+                $this->writeLog($sLine);
+            }
             return false;
 
         } elseif (empty($oTask->getCronExpression())) {
@@ -319,6 +360,10 @@ class Run extends Base
                 'Cron task "%s" misconfigured; cron expression is empty',
                 get_class($oTask),
             ));
+        }
+
+        foreach ($this->skipNotice()->observe($sClass, null, $this->now()) as $sLine) {
+            $this->writeLog($sLine);
         }
 
         return true;
@@ -341,15 +386,15 @@ class Run extends Base
         $oExpression = CronExpression::factory($oTask->getCronExpression());
 
         if (!$oExpression->isDue($oNow)) {
-            $this->oOutput->writeln('↳ not due to run');
+            $this->writeIdle('↳ not due to run');
             return false;
 
         } elseif (!$oTask->isEnabled()) {
-            $this->oOutput->writeln('↳ due to run, but task has been disabled');
+            $this->writeIdle('↳ due to run, but task has been disabled');
             return false;
 
         } elseif (!empty($oTask->getEnvironments()) && !in_array(Environment::get(), $oTask->getEnvironments())) {
-            $this->oOutput->writeln('↳ due to run, but not on ' . Environment::get());
+            $this->writeIdle('↳ due to run, but not on ' . Environment::get());
             return false;
         }
 
@@ -488,7 +533,7 @@ class Run extends Base
         $aProcesses = $this->getStalledTasks();
 
         if (empty($aProcesses)) {
-            $this->oOutput->writeln('No processes stalled');
+            $this->writeIdle('No processes stalled');
         }
 
         foreach ($aProcesses as $oProcess) {
@@ -560,5 +605,95 @@ class Run extends Base
         $sDriver::exception($e, false);
 
         return $this;
+    }
+
+    // --------------------------------------------------------------------------
+
+    protected function banner(string $sText, string $sType = 'info')
+    {
+        if ($this->logsToFile()) {
+            return;
+        }
+
+        parent::banner($sText, $sType);
+    }
+
+    // --------------------------------------------------------------------------
+
+    /**
+     * @param array<string, mixed> $aArguments
+     */
+    protected function callCommand($sCommand, array $aArguments = [], $bInteractive = true, $bSilent = false, ?OutputInterface $oCapture = null)
+    {
+        if ($oCapture === null) {
+            return parent::callCommand($sCommand, $aArguments, $bInteractive, $bSilent);
+        }
+
+        $oCmd      = $this->getApplication()->find($sCommand);
+        $oCmdInput = new ArrayInput(array_merge(['command' => $sCommand], $aArguments));
+        $oCmdInput->setInteractive($bInteractive);
+
+        return $oCmd->run($oCmdInput, $oCapture);
+    }
+
+    // --------------------------------------------------------------------------
+
+    protected function taskLogsOutput(Interfaces\Task $oTask): bool
+    {
+        if (method_exists($oTask, 'logsOutput')) {
+            return (bool) $oTask->logsOutput();
+        }
+
+        return true;
+    }
+
+    // --------------------------------------------------------------------------
+
+    protected function logsToFile(): bool
+    {
+        return $this->oOutput instanceof LoggerOutput;
+    }
+
+    // --------------------------------------------------------------------------
+
+    protected function writeLog(string $sMessage): void
+    {
+        $this->oOutput->writeln($sMessage);
+    }
+
+    // --------------------------------------------------------------------------
+
+    protected function writeIdle(string $sMessage): void
+    {
+        if ($this->logGate()->acceptsIdle()) {
+            $this->oOutput->writeln($sMessage);
+        }
+    }
+
+    // --------------------------------------------------------------------------
+
+    protected function logGate(): LogGate
+    {
+        return new LogGate($this->logsToFile());
+    }
+
+    // --------------------------------------------------------------------------
+
+    protected function skipNotice(): SkipNotice
+    {
+        /** @var \Nails\Common\Factory\Logger $oLogger */
+        $oLogger = Factory::factory('Logger');
+
+        return new SkipNotice(rtrim($oLogger->getDir(), '/') . '/cron-skip-state.json');
+    }
+
+    // --------------------------------------------------------------------------
+
+    protected function now(): \DateTimeInterface
+    {
+        /** @var \DateTime $oNow */
+        $oNow = Factory::factory('DateTime');
+
+        return $oNow;
     }
 }
